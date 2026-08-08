@@ -118,6 +118,11 @@ function countryOf(hometown) {
   const parts = hometown.split(',').map(s => s.trim());
   return parts[parts.length - 1];
 }
+function stateOf(hometown) {
+  if (!hometown) return null;
+  const parts = hometown.split(',').map(s => s.trim());
+  return parts.length >= 3 ? parts[parts.length - 2] : null;
+}
 const countryCounts = {};
 signedBios.forEach(b => { const c = countryOf(b.hometown); countryCounts[c] = (countryCounts[c]||0) + 1; });
 const nationality = Object.entries(countryCounts).sort((a,b) => b[1]-a[1]).map(([country,count]) => ({country, count}));
@@ -212,10 +217,14 @@ const allNames = new Set([...battingRows.map(r=>r.name), ...pitchingRows.map(r=>
 const explorerPlayers = [...allNames].map(name => {
   const bat = battingRows.find(r => r.name === name) || {};
   const pit = pitchByName.get(name) || {};
+  const bio = bioMap.get(name) || {};
   const team = bat.team || pit.team;
   const age = bat.age ?? pit.age ?? null;
   return {
     name, team, pos: bat.pos || pit.pos, age,
+    bats: bio.bats ?? null, throws: bio.throws ?? null,
+    country: bio.hometown ? countryOf(bio.hometown) : null,
+    homeState: bio.hometown ? stateOf(bio.hometown) : null,
     G: bat.G ?? null, PA: bat.PA ?? null, AB: bat.AB ?? null, R: bat.R ?? null, H: bat.H ?? null,
     HR: bat.HR ?? null, RBI: bat.RBI ?? null, BB: bat.BB ?? null, SO: bat.SO ?? null, SB: bat.SB ?? null,
     AVG: bat.AVG ?? null, OBP: bat.OBP ?? null, SLG: bat.SLG ?? null, OPS: bat.OPS ?? null,

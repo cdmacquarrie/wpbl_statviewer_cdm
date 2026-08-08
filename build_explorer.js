@@ -6,6 +6,11 @@ const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS:
 
 const STAT_DEFS = [
   { key: 'age', label: 'Age', group: 'Bio', fmt: 1 },
+  { key: 'pos', label: 'Position', group: 'Bio', type: 'categorical' },
+  { key: 'bats', label: 'Bats (B arm)', group: 'Bio', type: 'categorical' },
+  { key: 'throws', label: 'Throws (T arm)', group: 'Bio', type: 'categorical' },
+  { key: 'country', label: 'Home Country', group: 'Bio', type: 'categorical' },
+  { key: 'homeState', label: 'Home State/Province', group: 'Bio', type: 'categorical' },
   { key: 'G', label: 'Games', group: 'Batting', fmt: 0 },
   { key: 'PA', label: 'Plate Appearances', group: 'Batting', fmt: 0 },
   { key: 'AB', label: 'At-Bats', group: 'Batting', fmt: 0 },
@@ -186,6 +191,39 @@ function domain(vals, padFrac=0.12) {
   return [min - span*padFrac, max + span*padFrac];
 }
 function fmtVal(v, digits) { return v == null ? '—' : v.toFixed(digits); }
+function displayVal(p, key, def) { return def.type === 'categorical' ? p[key] : fmtVal(p[key], def.fmt); }
+
+// For a categorical axis: map each category to an integer slot (sorted by
+// frequency desc, ties alphabetical), then deterministically jitter points
+// within their slot (sorted by name) so overlapping players stay visible.
+function buildCategoricalAxis(pts, key) {
+  const counts = new Map();
+  pts.forEach(p => counts.set(p[key], (counts.get(p[key])||0) + 1));
+  const categories = [...counts.keys()].sort((a,b) => counts.get(b)-counts.get(a) || String(a).localeCompare(String(b)));
+  const catIndex = new Map(categories.map((c,i) => [c, i]));
+  const byCat = new Map(categories.map(c => [c, []]));
+  [...pts].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => byCat.get(p[key]).push(p));
+  const jitterOf = new Map();
+  byCat.forEach(group => {
+    const n = group.length;
+    const step = Math.min(0.09, 0.32 / Math.max(n,1));
+    group.forEach((p,i) => jitterOf.set(p, (i - (n-1)/2) * step));
+  });
+  return {
+    isCategorical: true,
+    getValue: p => catIndex.get(p[key]) + jitterOf.get(p),
+    domainMin: -0.5, domainMax: categories.length - 0.5,
+    ticks: categories.map((c,i) => ({ pos: i, label: String(c) })),
+  };
+}
+function buildNumericAxis(pts, key, def) {
+  const vals = pts.map(p => p[key]);
+  const [min, max] = domain(vals);
+  const ticks = [];
+  const n = 5;
+  for (let i=0;i<=n;i++) { const v = min + (max-min)*i/n; ticks.push({ pos: v, label: fmtVal(v, def.fmt) }); }
+  return { isCategorical: false, getValue: p => p[key], domainMin: min, domainMax: max, ticks };
+}
 
 function render() {
   const xKey = xSelect.value, yKey = ySelect.value;
@@ -201,48 +239,55 @@ function render() {
     return;
   }
 
-  const xs = pts.map(p=>p[xKey]), ys = pts.map(p=>p[yKey]);
-  const r = pearson(xs, ys);
-  const trend = linreg(xs, ys);
-  const abs = Math.abs(r);
-  const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
-  badgesEl.innerHTML = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
+  const anyCategorical = xDef.type === 'categorical' || yDef.type === 'categorical';
+  const xAxis = xDef.type === 'categorical' ? buildCategoricalAxis(pts, xKey) : buildNumericAxis(pts, xKey, xDef);
+  const yAxis = yDef.type === 'categorical' ? buildCategoricalAxis(pts, yKey) : buildNumericAxis(pts, yKey, yDef);
+
+  let trend = null;
+  if (!anyCategorical) {
+    const xs = pts.map(p=>p[xKey]), ys = pts.map(p=>p[yKey]);
+    const r = pearson(xs, ys);
+    trend = linreg(xs, ys);
+    const abs = Math.abs(r);
+    const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
+    badgesEl.innerHTML = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
+  } else {
+    badgesEl.innerHTML = \`<span class="n-badge">n = \${pts.length}</span><span class="strength-badge">categorical axis — correlation not applicable</span>\`;
+  }
 
   const width = 800, height = 440;
-  const margin = { top: 16, right: 24, bottom: 50, left: 64 };
+  const margin = { top: 16, right: 24, bottom: xAxis.isCategorical ? 66 : 50, left: yAxis.isCategorical ? 132 : 64 };
   const plotW = width - margin.left - margin.right;
   const plotH = height - margin.top - margin.bottom;
-  const [xMin, xMax] = domain(xs);
-  const [yMin, yMax] = domain(ys);
-  const sx = v => margin.left + (v-xMin)/(xMax-xMin)*plotW;
-  const sy = v => margin.top + plotH - (v-yMin)/(yMax-yMin)*plotH;
+  const sx = v => margin.left + (v-xAxis.domainMin)/(xAxis.domainMax-xAxis.domainMin)*plotW;
+  const sy = v => margin.top + plotH - (v-yAxis.domainMin)/(yAxis.domainMax-yAxis.domainMin)*plotH;
 
   let svg = \`<svg viewBox="0 0 \${width} \${height}" width="100%" height="\${height}">\`;
-  const yTicks = 5, xTicks = 6;
-  for (let i=0;i<=yTicks;i++){
-    const v = yMin + (yMax-yMin)*i/yTicks;
-    const y = sy(v);
+  yAxis.ticks.forEach(t => {
+    const y = sy(t.pos);
     svg += \`<line x1="\${margin.left}" y1="\${y}" x2="\${width-margin.right}" y2="\${y}" class="gridline"/>\`;
-    svg += \`<text x="\${margin.left-8}" y="\${y+4}" class="axis-label" text-anchor="end">\${fmtVal(v, yDef.fmt)}</text>\`;
-  }
-  for (let i=0;i<=xTicks;i++){
-    const v = xMin + (xMax-xMin)*i/xTicks;
-    const x = sx(v);
-    svg += \`<text x="\${x}" y="\${height-margin.bottom+20}" class="axis-label" text-anchor="middle">\${fmtVal(v, xDef.fmt)}</text>\`;
-  }
+    svg += \`<text x="\${margin.left-8}" y="\${y+4}" class="axis-label" text-anchor="end">\${t.label}</text>\`;
+  });
+  xAxis.ticks.forEach(t => {
+    const x = sx(t.pos);
+    svg += \`<text x="\${x}" y="\${height-margin.bottom+20}" class="axis-label" text-anchor="\${xAxis.isCategorical?'end':'middle'}" transform="\${xAxis.isCategorical?\`rotate(-30 \${x} \${height-margin.bottom+20})\`:''}">\${t.label}</text>\`;
+  });
   svg += \`<line x1="\${margin.left}" y1="\${margin.top}" x2="\${margin.left}" y2="\${height-margin.bottom}" class="axis-line"/>\`;
   svg += \`<line x1="\${margin.left}" y1="\${height-margin.bottom}" x2="\${width-margin.right}" y2="\${height-margin.bottom}" class="axis-line"/>\`;
 
-  const tx1=xMin, tx2=xMax, ty1=trend.slope*tx1+trend.intercept, ty2=trend.slope*tx2+trend.intercept;
-  svg += \`<line x1="\${sx(tx1)}" y1="\${sy(ty1)}" x2="\${sx(tx2)}" y2="\${sy(ty2)}" class="trend-line"/>\`;
+  if (trend) {
+    const tx1=xAxis.domainMin+((xAxis.domainMax-xAxis.domainMin)*0.02), tx2=xAxis.domainMax-((xAxis.domainMax-xAxis.domainMin)*0.02);
+    const ty1=trend.slope*tx1+trend.intercept, ty2=trend.slope*tx2+trend.intercept;
+    svg += \`<line x1="\${sx(tx1)}" y1="\${sy(ty1)}" x2="\${sx(tx2)}" y2="\${sy(ty2)}" class="trend-line"/>\`;
+  }
 
   pts.forEach((p,i) => {
-    const cx = sx(p[xKey]), cy = sy(p[yKey]);
+    const cx = sx(xAxis.getValue(p)), cy = sy(yAxis.getValue(p));
     const color = TEAM_COLOR[p.team] || '#888';
     svg += \`<circle class="pt" data-i="\${i}" cx="\${cx.toFixed(1)}" cy="\${cy.toFixed(1)}" r="6" fill="\${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5"/>\`;
   });
 
-  svg += \`<text x="\${margin.left + plotW/2}" y="\${height-8}" class="axis-title" text-anchor="middle">\${xDef.label}</text>\`;
+  svg += \`<text x="\${margin.left + plotW/2}" y="\${height-6}" class="axis-title" text-anchor="middle">\${xDef.label}</text>\`;
   svg += \`<text x="16" y="\${margin.top + plotH/2}" class="axis-title" text-anchor="middle" transform="rotate(-90 16 \${margin.top + plotH/2})">\${yDef.label}</text>\`;
   svg += \`</svg>\`;
   chartHost.innerHTML = svg;
@@ -250,7 +295,7 @@ function render() {
   chartHost.querySelectorAll('circle.pt').forEach(circle => {
     circle.addEventListener('mousemove', (e) => {
       const p = pts[+circle.dataset.i];
-      tooltip.textContent = \`\${p.name} (\${TEAM_NAME[p.team]}) — \${xDef.label}: \${fmtVal(p[xKey], xDef.fmt)}, \${yDef.label}: \${fmtVal(p[yKey], yDef.fmt)}\`;
+      tooltip.textContent = \`\${p.name} (\${TEAM_NAME[p.team]}) — \${xDef.label}: \${displayVal(p, xKey, xDef)}, \${yDef.label}: \${displayVal(p, yKey, yDef)}\`;
       tooltip.style.left = (e.offsetX + 14) + 'px';
       tooltip.style.top = (e.offsetY + 8) + 'px';
       tooltip.style.opacity = '1';
