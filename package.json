@@ -1,0 +1,15 @@
+{
+  "name": "wpbl-stats-dashboards",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scrapes womensprobaseballleague.com daily and regenerates 4 static HTML dashboards (team/player stats, player bios, bio x performance analytics, interactive stat explorer).",
+  "scripts": {
+    "start": "node run_all.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "ml-pca": "^4.1.1",
+    "tsne-js": "^1.0.3",
+    "umap-js": "^1.4.0"
+  }
+}

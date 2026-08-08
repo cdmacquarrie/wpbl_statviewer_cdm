@@ -1,0 +1,278 @@
+const fs = require('fs');
+const resultData = require('./output/result.json');
+
+const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
+const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
+
+const STAT_DEFS = [
+  { key: 'age', label: 'Age', group: 'Bio', fmt: 1 },
+  { key: 'G', label: 'Games', group: 'Batting', fmt: 0 },
+  { key: 'PA', label: 'Plate Appearances', group: 'Batting', fmt: 0 },
+  { key: 'AB', label: 'At-Bats', group: 'Batting', fmt: 0 },
+  { key: 'R', label: 'Runs', group: 'Batting', fmt: 0 },
+  { key: 'H', label: 'Hits', group: 'Batting', fmt: 0 },
+  { key: 'HR', label: 'Home Runs', group: 'Batting', fmt: 0 },
+  { key: 'RBI', label: 'RBI', group: 'Batting', fmt: 0 },
+  { key: 'BB', label: 'Walks', group: 'Batting', fmt: 0 },
+  { key: 'SO', label: 'Strikeouts (batting)', group: 'Batting', fmt: 0 },
+  { key: 'SB', label: 'Stolen Bases', group: 'Batting', fmt: 0 },
+  { key: 'AVG', label: 'Batting Average', group: 'Batting', fmt: 3 },
+  { key: 'OBP', label: 'On-Base %', group: 'Batting', fmt: 3 },
+  { key: 'SLG', label: 'Slugging %', group: 'Batting', fmt: 3 },
+  { key: 'OPS', label: 'OPS', group: 'Batting', fmt: 3 },
+  { key: 'IP', label: 'Innings Pitched', group: 'Pitching', fmt: 1 },
+  { key: 'ERA', label: 'ERA', group: 'Pitching', fmt: 2 },
+  { key: 'WHIP', label: 'WHIP', group: 'Pitching', fmt: 2 },
+  { key: 'W', label: 'Wins', group: 'Pitching', fmt: 0 },
+  { key: 'L', label: 'Losses', group: 'Pitching', fmt: 0 },
+  { key: 'SV', label: 'Saves', group: 'Pitching', fmt: 0 },
+  { key: 'K_pitch', label: 'Strikeouts (pitching)', group: 'Pitching', fmt: 0 },
+  { key: 'BB_allowed', label: 'Walks Allowed', group: 'Pitching', fmt: 0 },
+  { key: 'ER', label: 'Earned Runs', group: 'Pitching', fmt: 0 },
+];
+
+const players = resultData.explorerPlayers;
+
+const dataJson = JSON.stringify(players);
+const statDefsJson = JSON.stringify(STAT_DEFS);
+const teamColorJson = JSON.stringify(TEAM_COLOR);
+const teamNameJson = JSON.stringify(TEAM_NAME);
+
+const html = `<title>WPBL 2026 Stat Explorer</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --surface-0: #f5f4f0; --surface-1: #ffffff; --surface-2: #f0efe9;
+  --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #898781;
+  --grid: #e1e0d9; --baseline: #c3c2b7; --border: rgba(11,11,11,0.10);
+  --accent: #1d4fd6;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text-primary); background: var(--surface-0);
+  padding: 28px 20px 56px; box-sizing: border-box;
+}
+.viz-root * { box-sizing: border-box; }
+.wrap { max-width: 900px; margin: 0 auto; }
+header.page-head { margin-bottom: 20px; }
+header.page-head .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.12em; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; }
+header.page-head h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
+header.page-head p { margin: 0; color: var(--text-secondary); font-size: 13.5px; }
+header.page-head .cite { color: var(--text-muted); font-size: 11.5px; margin-top: 8px; }
+.caveat { background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--accent); border-radius: 8px; padding: 12px 16px; margin: 16px 0 20px; font-size: 12.5px; color: var(--text-secondary); }
+.controls { display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 18px; }
+.control-group { display: flex; flex-direction: column; gap: 5px; }
+.control-group label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.control-group select { font-size: 13.5px; padding: 7px 10px; border-radius: 7px; border: 1px solid var(--baseline); background: var(--surface-1); color: var(--text-primary); font-family: inherit; min-width: 190px; }
+.control-group.checkbox { flex-direction: row; align-items: center; gap: 7px; }
+.control-group.checkbox label { text-transform: none; font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.swap-btn { font-size: 12px; font-weight: 700; padding: 8px 12px; border-radius: 7px; border: 1px solid var(--baseline); background: var(--surface-2); color: var(--text-primary); cursor: pointer; }
+.swap-btn:hover { background: var(--grid); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
+.badges { margin-bottom: 10px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.r-badge { font-family: ui-monospace, monospace; font-size: 13px; font-weight: 700; color: var(--text-primary); background: var(--surface-2); padding: 4px 9px; border-radius: 5px; }
+.n-badge, .strength-badge { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+.strength-badge { color: var(--text-secondary); font-weight: 600; }
+.legend-row { display: flex; gap: 16px; flex-wrap: wrap; margin: 4px 0 14px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
+.legend-row span { display: inline-flex; align-items: center; gap: 6px; }
+.legend-row i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+svg text.axis-label { font-size: 10px; fill: var(--text-muted); font-family: system-ui, sans-serif; }
+svg text.axis-title { font-size: 12px; fill: var(--text-secondary); font-family: system-ui, sans-serif; font-weight: 600; }
+svg line.gridline { stroke: var(--grid); stroke-width: 1; }
+svg line.axis-line { stroke: var(--baseline); stroke-width: 1; }
+svg line.trend-line { stroke: var(--text-secondary); stroke-width: 2; stroke-dasharray: 5 4; }
+svg circle.pt { cursor: pointer; }
+.tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 10; }
+.empty-msg { text-align: center; color: var(--text-muted); font-size: 13px; padding: 60px 0; }
+</style>
+<div class="viz-root">
+  <div class="wrap">
+    <header class="page-head">
+      <div class="kicker">2026 Regular Season</div>
+      <h1>WPBL Stat Explorer</h1>
+      <p>Pick any two stats to plot every player and see the correlation between them, computed live in your browser.</p>
+      <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(resultData.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
+    </header>
+    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games. Most players have single-digit plate appearances or innings pitched, so correlations here reflect one weekend, not a real trend.</div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="xSelect">X axis</label>
+        <select id="xSelect"></select>
+      </div>
+      <button class="swap-btn" id="swapBtn" title="Swap axes">⇄ Swap</button>
+      <div class="control-group">
+        <label for="ySelect">Y axis</label>
+        <select id="ySelect"></select>
+      </div>
+      <div class="control-group checkbox">
+        <input type="checkbox" id="qualToggle">
+        <label for="qualToggle">Qualified only (5+ AB for batting stats, 2+ IP for pitching stats)</label>
+      </div>
+    </div>
+
+    <div class="legend-row">
+      <span><i style="background:${TEAM_COLOR.LA}"></i>Los Angeles</span>
+      <span><i style="background:${TEAM_COLOR.NY}"></i>New York</span>
+      <span><i style="background:${TEAM_COLOR.SF}"></i>San Francisco</span>
+      <span><i style="background:${TEAM_COLOR.BOS}"></i>Boston</span>
+    </div>
+
+    <div class="card" style="position:relative;">
+      <div class="badges" id="badges"></div>
+      <div id="chartHost"></div>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+</div>
+<script>
+const PLAYERS = ${dataJson};
+const STAT_DEFS = ${statDefsJson};
+const TEAM_COLOR = ${teamColorJson};
+const TEAM_NAME = ${teamNameJson};
+const STAT_MAP = Object.fromEntries(STAT_DEFS.map(s => [s.key, s]));
+
+const xSelect = document.getElementById('xSelect');
+const ySelect = document.getElementById('ySelect');
+const qualToggle = document.getElementById('qualToggle');
+const swapBtn = document.getElementById('swapBtn');
+const chartHost = document.getElementById('chartHost');
+const badgesEl = document.getElementById('badges');
+const tooltip = document.getElementById('tooltip');
+
+function buildOptions(select, selectedKey) {
+  const groups = {};
+  STAT_DEFS.forEach(s => { (groups[s.group] = groups[s.group] || []).push(s); });
+  select.innerHTML = '';
+  Object.entries(groups).forEach(([g, stats]) => {
+    const og = document.createElement('optgroup');
+    og.label = g;
+    stats.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.key; opt.textContent = s.label;
+      if (s.key === selectedKey) opt.selected = true;
+      og.appendChild(opt);
+    });
+    select.appendChild(og);
+  });
+}
+buildOptions(xSelect, 'age');
+buildOptions(ySelect, 'OPS');
+
+function isQualified(p, xDef, yDef) {
+  const groups = [xDef.group, yDef.group];
+  if (groups.includes('Pitching') && !(p.IP != null && p.IP >= 2)) return false;
+  if (groups.includes('Batting') && !(p.AB != null && p.AB >= 5)) return false;
+  return true;
+}
+
+function pearson(xs, ys) {
+  const n = xs.length;
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, dx=0, dy=0;
+  for (let i=0;i<n;i++){ const a=xs[i]-mx, b=ys[i]-my; num+=a*b; dx+=a*a; dy+=b*b; }
+  if (dx===0||dy===0) return 0;
+  return num/Math.sqrt(dx*dy);
+}
+function linreg(xs, ys) {
+  const n = xs.length;
+  const mx = xs.reduce((a,b)=>a+b,0)/n, my = ys.reduce((a,b)=>a+b,0)/n;
+  let num=0, den=0;
+  for (let i=0;i<n;i++){ num += (xs[i]-mx)*(ys[i]-my); den += (xs[i]-mx)**2; }
+  const slope = den===0 ? 0 : num/den;
+  return { slope, intercept: my - slope*mx };
+}
+function domain(vals, padFrac=0.12) {
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max-min) || 1;
+  return [min - span*padFrac, max + span*padFrac];
+}
+function fmtVal(v, digits) { return v == null ? '—' : v.toFixed(digits); }
+
+function render() {
+  const xKey = xSelect.value, yKey = ySelect.value;
+  const xDef = STAT_MAP[xKey], yDef = STAT_MAP[yKey];
+  const qualOnly = qualToggle.checked;
+
+  let pts = PLAYERS.filter(p => p[xKey] != null && p[yKey] != null && p.team);
+  if (qualOnly) pts = pts.filter(p => isQualified(p, xDef, yDef));
+
+  if (pts.length < 2) {
+    chartHost.innerHTML = '<div class="empty-msg">Not enough players have both stats to plot.</div>';
+    badgesEl.innerHTML = '';
+    return;
+  }
+
+  const xs = pts.map(p=>p[xKey]), ys = pts.map(p=>p[yKey]);
+  const r = pearson(xs, ys);
+  const trend = linreg(xs, ys);
+  const abs = Math.abs(r);
+  const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
+  badgesEl.innerHTML = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
+
+  const width = 800, height = 440;
+  const margin = { top: 16, right: 24, bottom: 50, left: 64 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
+  const [xMin, xMax] = domain(xs);
+  const [yMin, yMax] = domain(ys);
+  const sx = v => margin.left + (v-xMin)/(xMax-xMin)*plotW;
+  const sy = v => margin.top + plotH - (v-yMin)/(yMax-yMin)*plotH;
+
+  let svg = \`<svg viewBox="0 0 \${width} \${height}" width="100%" height="\${height}">\`;
+  const yTicks = 5, xTicks = 6;
+  for (let i=0;i<=yTicks;i++){
+    const v = yMin + (yMax-yMin)*i/yTicks;
+    const y = sy(v);
+    svg += \`<line x1="\${margin.left}" y1="\${y}" x2="\${width-margin.right}" y2="\${y}" class="gridline"/>\`;
+    svg += \`<text x="\${margin.left-8}" y="\${y+4}" class="axis-label" text-anchor="end">\${fmtVal(v, yDef.fmt)}</text>\`;
+  }
+  for (let i=0;i<=xTicks;i++){
+    const v = xMin + (xMax-xMin)*i/xTicks;
+    const x = sx(v);
+    svg += \`<text x="\${x}" y="\${height-margin.bottom+20}" class="axis-label" text-anchor="middle">\${fmtVal(v, xDef.fmt)}</text>\`;
+  }
+  svg += \`<line x1="\${margin.left}" y1="\${margin.top}" x2="\${margin.left}" y2="\${height-margin.bottom}" class="axis-line"/>\`;
+  svg += \`<line x1="\${margin.left}" y1="\${height-margin.bottom}" x2="\${width-margin.right}" y2="\${height-margin.bottom}" class="axis-line"/>\`;
+
+  const tx1=xMin, tx2=xMax, ty1=trend.slope*tx1+trend.intercept, ty2=trend.slope*tx2+trend.intercept;
+  svg += \`<line x1="\${sx(tx1)}" y1="\${sy(ty1)}" x2="\${sx(tx2)}" y2="\${sy(ty2)}" class="trend-line"/>\`;
+
+  pts.forEach((p,i) => {
+    const cx = sx(p[xKey]), cy = sy(p[yKey]);
+    const color = TEAM_COLOR[p.team] || '#888';
+    svg += \`<circle class="pt" data-i="\${i}" cx="\${cx.toFixed(1)}" cy="\${cy.toFixed(1)}" r="6" fill="\${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5"/>\`;
+  });
+
+  svg += \`<text x="\${margin.left + plotW/2}" y="\${height-8}" class="axis-title" text-anchor="middle">\${xDef.label}</text>\`;
+  svg += \`<text x="16" y="\${margin.top + plotH/2}" class="axis-title" text-anchor="middle" transform="rotate(-90 16 \${margin.top + plotH/2})">\${yDef.label}</text>\`;
+  svg += \`</svg>\`;
+  chartHost.innerHTML = svg;
+
+  chartHost.querySelectorAll('circle.pt').forEach(circle => {
+    circle.addEventListener('mousemove', (e) => {
+      const p = pts[+circle.dataset.i];
+      tooltip.textContent = \`\${p.name} (\${TEAM_NAME[p.team]}) — \${xDef.label}: \${fmtVal(p[xKey], xDef.fmt)}, \${yDef.label}: \${fmtVal(p[yKey], yDef.fmt)}\`;
+      tooltip.style.left = (e.offsetX + 14) + 'px';
+      tooltip.style.top = (e.offsetY + 8) + 'px';
+      tooltip.style.opacity = '1';
+    });
+    circle.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+  });
+  chartHost.style.position = 'relative';
+}
+
+xSelect.addEventListener('change', render);
+ySelect.addEventListener('change', render);
+qualToggle.addEventListener('change', render);
+swapBtn.addEventListener('click', () => {
+  const x = xSelect.value, y = ySelect.value;
+  buildOptions(xSelect, y);
+  buildOptions(ySelect, x);
+  render();
+});
+
+render();
+</script>
+`;
+
+fs.writeFileSync('./output/wpbl_explorer.html', html);
+console.log('Wrote wpbl_explorer.html —', players.length, 'players');
