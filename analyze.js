@@ -148,6 +148,25 @@ const rosterByTeam = teamCodes.map(code => ({
     .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws })),
 }));
 
+// ---- team-level roster/bio composition (for team vs. team correlation explorer) ----
+const teamStats = teams.map(t => {
+  const list = signedBios.filter(b => b.teamCode === t.code);
+  const withHometown = list.filter(b => b.hometown);
+  const usaCount = withHometown.filter(b => countryOf(b.hometown) === 'USA').length;
+  const pctUSA = withHometown.length ? usaCount / withHometown.length * 100 : null;
+  const ages = list.map(b => b.age).filter(a => a != null);
+  const avgAge = ages.length ? ages.reduce((a,b)=>a+b,0) / ages.length : null;
+  const pctLeftBats = list.length ? list.filter(b => b.bats === 'L').length / list.length * 100 : null;
+  const pctLeftThrows = list.length ? list.filter(b => b.throws === 'L').length / list.length * 100 : null;
+  return {
+    name: t.name, team: t.code, code: t.code,
+    W: t.W, L: t.L, pct: t.pct, gb: t.gb, place: t.place, runDiff: t.runDiff,
+    R_per_game: t.perGame.R, RA_per_game: t.perGame.RA, HR_per_game: t.perGame.HR,
+    AVG: t.AVG, ERA: t.ERA, WHIP: t.WHIP, FPCT: t.FPCT,
+    avgAge, pctUSA, pctLeftBats, pctLeftThrows, rosterSize: list.length,
+  };
+});
+
 // ---- correlations ----
 function pearson(xs, ys) {
   const n = xs.length;
@@ -243,7 +262,7 @@ const result = {
   },
   correlations, pca_explained: pcaExplained, pcaPlayers,
   sbCorrelationPoints: ageSbBatters,
-  explorerPlayers,
+  explorerPlayers, teamStats,
 };
 
 fs.writeFileSync('./output/result.json', JSON.stringify(result, null, 2));

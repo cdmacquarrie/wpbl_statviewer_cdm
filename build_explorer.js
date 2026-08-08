@@ -4,7 +4,7 @@ const resultData = require('./output/result.json');
 const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
 const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
 
-const STAT_DEFS = [
+const PLAYER_STAT_DEFS = [
   { key: 'age', label: 'Age', group: 'Bio', fmt: 1 },
   { key: 'pos', label: 'Position', group: 'Bio', type: 'categorical' },
   { key: 'bats', label: 'Bats (B arm)', group: 'Bio', type: 'categorical' },
@@ -36,10 +36,32 @@ const STAT_DEFS = [
   { key: 'ER', label: 'Earned Runs', group: 'Pitching', fmt: 0 },
 ];
 
+const TEAM_STAT_DEFS = [
+  { key: 'pct', label: 'Win %', group: 'Record', fmt: 3 },
+  { key: 'W', label: 'Wins', group: 'Record', fmt: 0 },
+  { key: 'L', label: 'Losses', group: 'Record', fmt: 0 },
+  { key: 'runDiff', label: 'Run Differential', group: 'Record', fmt: 0 },
+  { key: 'R_per_game', label: 'Runs / Game', group: 'Performance', fmt: 2 },
+  { key: 'RA_per_game', label: 'Runs Allowed / Game', group: 'Performance', fmt: 2 },
+  { key: 'HR_per_game', label: 'Home Runs / Game', group: 'Performance', fmt: 2 },
+  { key: 'AVG', label: 'Team Batting Avg', group: 'Performance', fmt: 3 },
+  { key: 'ERA', label: 'Team ERA', group: 'Performance', fmt: 2 },
+  { key: 'WHIP', label: 'Team WHIP', group: 'Performance', fmt: 2 },
+  { key: 'FPCT', label: 'Fielding %', group: 'Performance', fmt: 3 },
+  { key: 'avgAge', label: 'Avg Roster Age', group: 'Roster', fmt: 1 },
+  { key: 'pctUSA', label: '% From USA', group: 'Roster', fmt: 1 },
+  { key: 'pctLeftBats', label: '% Left-Handed Bats', group: 'Roster', fmt: 1 },
+  { key: 'pctLeftThrows', label: '% Left-Handed Throws', group: 'Roster', fmt: 1 },
+  { key: 'rosterSize', label: 'Roster Size', group: 'Roster', fmt: 0 },
+];
+
 const players = resultData.explorerPlayers;
+const teamStats = resultData.teamStats;
 
 const dataJson = JSON.stringify(players);
-const statDefsJson = JSON.stringify(STAT_DEFS);
+const teamStatsJson = JSON.stringify(teamStats);
+const playerStatDefsJson = JSON.stringify(PLAYER_STAT_DEFS);
+const teamStatDefsJson = JSON.stringify(TEAM_STAT_DEFS);
 const teamColorJson = JSON.stringify(TEAM_COLOR);
 const teamNameJson = JSON.stringify(TEAM_NAME);
 
@@ -100,6 +122,13 @@ svg circle.pt { cursor: pointer; }
 
     <div class="controls">
       <div class="control-group">
+        <label for="levelSelect">Level</label>
+        <select id="levelSelect">
+          <option value="player">Players</option>
+          <option value="team">Teams</option>
+        </select>
+      </div>
+      <div class="control-group">
         <label for="xSelect">X axis</label>
         <select id="xSelect"></select>
       </div>
@@ -108,7 +137,7 @@ svg circle.pt { cursor: pointer; }
         <label for="ySelect">Y axis</label>
         <select id="ySelect"></select>
       </div>
-      <div class="control-group checkbox">
+      <div class="control-group checkbox" id="qualGroup">
         <input type="checkbox" id="qualToggle">
         <label for="qualToggle">Qualified only (5+ AB for batting stats, 2+ IP for pitching stats)</label>
       </div>
@@ -130,22 +159,29 @@ svg circle.pt { cursor: pointer; }
 </div>
 <script>
 const PLAYERS = ${dataJson};
-const STAT_DEFS = ${statDefsJson};
+const TEAM_STATS = ${teamStatsJson};
+const PLAYER_STAT_DEFS = ${playerStatDefsJson};
+const TEAM_STAT_DEFS = ${teamStatDefsJson};
 const TEAM_COLOR = ${teamColorJson};
 const TEAM_NAME = ${teamNameJson};
-const STAT_MAP = Object.fromEntries(STAT_DEFS.map(s => [s.key, s]));
 
+const levelSelect = document.getElementById('levelSelect');
 const xSelect = document.getElementById('xSelect');
 const ySelect = document.getElementById('ySelect');
 const qualToggle = document.getElementById('qualToggle');
+const qualGroup = document.getElementById('qualGroup');
 const swapBtn = document.getElementById('swapBtn');
 const chartHost = document.getElementById('chartHost');
 const badgesEl = document.getElementById('badges');
 const tooltip = document.getElementById('tooltip');
 
+function currentDefs() { return levelSelect.value === 'team' ? TEAM_STAT_DEFS : PLAYER_STAT_DEFS; }
+function currentDataset() { return levelSelect.value === 'team' ? TEAM_STATS : PLAYERS; }
+
 function buildOptions(select, selectedKey) {
+  const defs = currentDefs();
   const groups = {};
-  STAT_DEFS.forEach(s => { (groups[s.group] = groups[s.group] || []).push(s); });
+  defs.forEach(s => { (groups[s.group] = groups[s.group] || []).push(s); });
   select.innerHTML = '';
   Object.entries(groups).forEach(([g, stats]) => {
     const og = document.createElement('optgroup');
@@ -161,6 +197,14 @@ function buildOptions(select, selectedKey) {
 }
 buildOptions(xSelect, 'age');
 buildOptions(ySelect, 'OPS');
+
+levelSelect.addEventListener('change', () => {
+  const isTeam = levelSelect.value === 'team';
+  qualGroup.style.display = isTeam ? 'none' : '';
+  buildOptions(xSelect, isTeam ? 'pctUSA' : 'age');
+  buildOptions(ySelect, isTeam ? 'pct' : 'OPS');
+  render();
+});
 
 function isQualified(p, xDef, yDef) {
   const groups = [xDef.group, yDef.group];
@@ -212,6 +256,7 @@ function buildCategoricalAxis(pts, key) {
   return {
     isCategorical: true,
     getValue: p => catIndex.get(p[key]) + jitterOf.get(p),
+    getCorrValue: p => catIndex.get(p[key]),
     domainMin: -0.5, domainMax: categories.length - 0.5,
     ticks: categories.map((c,i) => ({ pos: i, label: String(c) })),
   };
@@ -222,19 +267,22 @@ function buildNumericAxis(pts, key, def) {
   const ticks = [];
   const n = 5;
   for (let i=0;i<=n;i++) { const v = min + (max-min)*i/n; ticks.push({ pos: v, label: fmtVal(v, def.fmt) }); }
-  return { isCategorical: false, getValue: p => p[key], domainMin: min, domainMax: max, ticks };
+  return { isCategorical: false, getValue: p => p[key], getCorrValue: p => p[key], domainMin: min, domainMax: max, ticks };
 }
 
 function render() {
+  const isTeam = levelSelect.value === 'team';
+  const defs = currentDefs();
+  const map = Object.fromEntries(defs.map(s => [s.key, s]));
   const xKey = xSelect.value, yKey = ySelect.value;
-  const xDef = STAT_MAP[xKey], yDef = STAT_MAP[yKey];
-  const qualOnly = qualToggle.checked;
+  const xDef = map[xKey], yDef = map[yKey];
+  const qualOnly = !isTeam && qualToggle.checked;
 
-  let pts = PLAYERS.filter(p => p[xKey] != null && p[yKey] != null && p.team);
+  let pts = currentDataset().filter(p => p[xKey] != null && p[yKey] != null && p.team);
   if (qualOnly) pts = pts.filter(p => isQualified(p, xDef, yDef));
 
   if (pts.length < 2) {
-    chartHost.innerHTML = '<div class="empty-msg">Not enough players have both stats to plot.</div>';
+    chartHost.innerHTML = '<div class="empty-msg">Not enough ' + (isTeam ? 'teams' : 'players') + ' have both stats to plot.</div>';
     badgesEl.innerHTML = '';
     return;
   }
@@ -243,17 +291,16 @@ function render() {
   const xAxis = xDef.type === 'categorical' ? buildCategoricalAxis(pts, xKey) : buildNumericAxis(pts, xKey, xDef);
   const yAxis = yDef.type === 'categorical' ? buildCategoricalAxis(pts, yKey) : buildNumericAxis(pts, yKey, yDef);
 
-  let trend = null;
-  if (!anyCategorical) {
-    const xs = pts.map(p=>p[xKey]), ys = pts.map(p=>p[yKey]);
-    const r = pearson(xs, ys);
-    trend = linreg(xs, ys);
-    const abs = Math.abs(r);
-    const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
-    badgesEl.innerHTML = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
-  } else {
-    badgesEl.innerHTML = \`<span class="n-badge">n = \${pts.length}</span><span class="strength-badge">categorical axis — correlation not applicable</span>\`;
-  }
+  const xs = pts.map(p => xAxis.getCorrValue(p));
+  const ys = pts.map(p => yAxis.getCorrValue(p));
+  const r = pearson(xs, ys);
+  const trend = linreg(xs, ys);
+  const abs = Math.abs(r);
+  const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
+  let badgeHtml = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
+  if (anyCategorical) badgeHtml += \`<span class="n-badge">categorical axis encoded by frequency rank</span>\`;
+  if (isTeam) badgeHtml += \`<span class="n-badge">small sample — 4 teams</span>\`;
+  badgesEl.innerHTML = badgeHtml;
 
   const width = 800, height = 440;
   const margin = { top: 16, right: 24, bottom: xAxis.isCategorical ? 66 : 50, left: yAxis.isCategorical ? 132 : 64 };
@@ -295,7 +342,8 @@ function render() {
   chartHost.querySelectorAll('circle.pt').forEach(circle => {
     circle.addEventListener('mousemove', (e) => {
       const p = pts[+circle.dataset.i];
-      tooltip.textContent = \`\${p.name} (\${TEAM_NAME[p.team]}) — \${xDef.label}: \${displayVal(p, xKey, xDef)}, \${yDef.label}: \${displayVal(p, yKey, yDef)}\`;
+      const who = isTeam ? p.name : \`\${p.name} (\${TEAM_NAME[p.team]})\`;
+      tooltip.textContent = \`\${who} — \${xDef.label}: \${displayVal(p, xKey, xDef)}, \${yDef.label}: \${displayVal(p, yKey, yDef)}\`;
       tooltip.style.left = (e.offsetX + 14) + 'px';
       tooltip.style.top = (e.offsetY + 8) + 'px';
       tooltip.style.opacity = '1';
