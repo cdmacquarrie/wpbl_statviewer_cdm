@@ -7,12 +7,26 @@ const SECTIONS = [
   { file: 'wpbl_explorer.html', id: 'explorer', tab: 'Stat Explorer' },
 ];
 
+// Each build_*.js writes plain, unscoped class selectors (.card, .wrap, .badges, ...).
+// That's fine standalone, but once 4 style blocks land in one combined document, the
+// last-declared rule for a given class wins EVERYWHERE on the page (CSS cascade isn't
+// aware of our tab-panel divs) — so e.g. explorer's `.card` padding can silently bleed
+// into the stats tab's cards. Prefixing every selector with the panel's id scopes each
+// file's CSS to its own subtree and also outranks the old rules via ID specificity.
+function scopeCss(css, scopeSelector) {
+  return css.replace(/(^|\}|\{)([ \t\n]*)([^{}@][^{}]*)\{/g, (match, brace, ws, selectors) => {
+    const scoped = selectors.split(',').map(s => `${scopeSelector} ${s.trim()}`).join(', ');
+    return `${brace}${ws}${scoped} {`;
+  });
+}
+
 const parts = SECTIONS.map(s => {
   const raw = fs.readFileSync(`./output/${s.file}`, 'utf8');
   const m = raw.match(/<title>([\s\S]*?)<\/title>\s*<style>([\s\S]*?)<\/style>\s*([\s\S]*)$/);
   if (!m) throw new Error(`Could not parse ${s.file} — unexpected template shape`);
   const [, title, style, rest] = m;
-  return { ...s, title: title.trim(), style, rest };
+  const scopedStyle = scopeCss(style, `#panel-${s.id}`);
+  return { ...s, title: title.trim(), style: scopedStyle, rest };
 });
 
 const tabButtons = parts.map((p, i) =>

@@ -1,7 +1,5 @@
 const fs = require('fs');
 const { PCA } = require('ml-pca');
-const TSNE = require('tsne-js');
-const { UMAP } = require('umap-js');
 
 const raw = JSON.parse(fs.readFileSync('./output/raw_data.json', 'utf8'));
 const TEAM_ABBR = { boston: 'BOS', 'los-angeles': 'LA', 'new-york': 'NY', 'san-francisco': 'SF' };
@@ -12,9 +10,14 @@ function slugTeam(name) {
 }
 
 // ---- bios: attach age/bats/throws, normalize team to short code ----
+function parseDraft(sel) {
+  if (!sel) return { round: null, pick: null };
+  const m = sel.match(/Round\s*(\d+).*Pick\s*(\d+)/i);
+  return m ? { round: +m[1], pick: +m[2] } : { round: null, pick: null };
+}
 const bioMap = new Map(raw.bios.map(b => [b.name, {
   age: b.age, bats: b.bats, throws: b.throws, hometown: b.hometown,
-  team: slugTeam(b.team), status: b.status,
+  team: slugTeam(b.team), status: b.status, ...parseDraft(b.draftSelection),
 }]));
 
 // ---- batting / pitching: normalize field names, attach bio ----
@@ -194,6 +197,7 @@ const correlations = {
 };
 
 // ---- PCA / tSNE / UMAP on batters ----
+const FEATURE_LABELS = ['AVG', 'OBP', 'SLG', 'R/PA', 'H/PA', 'HR/PA', 'RBI/PA', 'BB/PA', 'SO/PA', 'SB/PA'];
 const feat = battingRows.map(r => {
   const pa = r.PA || 0;
   const safe = v => v == null ? 0 : v;
@@ -212,23 +216,23 @@ const pca = new PCA(Z);
 const pcaProj = pca.predict(Z, {nComponents:2}).to2DArray();
 const pcaExplained = pca.getExplainedVariance().slice(0,2);
 
-const tsneModel = new TSNE({ dim: 2, perplexity: 8, earlyExaggeration: 4.0, learningRate: 100.0, nIter: 1000, metric: 'euclidean' });
-tsneModel.init({ data: Z, type: 'dense' });
-tsneModel.run();
-const tsneOut = tsneModel.getOutputScaled();
+const pcaPlayers = battingRows.map((r,i) => {
+  const bio = bioMap.get(r.name) || {};
+  return {
+    name: r.name, team: r.team, pos: r.pos,
+    pc1: +pcaProj[i][0].toFixed(4), pc2: +pcaProj[i][1].toFixed(4),
+    draftRound: bio.round ?? null, draftPick: bio.pick ?? null,
+  };
+});
 
-let seed = 1;
-function seededRandom() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
-const Zj = Z.map(row => row.map(v => v + (seededRandom()-0.5)*1e-4));
-const umap = new UMAP({ nComponents: 2, nNeighbors: 8, minDist: 0.3, random: seededRandom });
-const umapOut = umap.fit(Zj);
-
-const pcaPlayers = battingRows.map((r,i) => ({
-  name: r.name, team: r.team, pos: r.pos,
-  pc1: +pcaProj[i][0].toFixed(4), pc2: +pcaProj[i][1].toFixed(4),
-  tsneX: +tsneOut[i][0].toFixed(4), tsneY: +tsneOut[i][1].toFixed(4),
-  umapX: +umapOut[i][0].toFixed(4), umapY: +umapOut[i][1].toFixed(4),
-}));
+// ---- PCA loadings: true linear weight of each feature on PC1/PC2 ----
+const loadingsMatrix = pca.getLoadings().to2DArray();
+const clusterLoadings = {
+  pca: {
+    pc1: FEATURE_LABELS.map((label, i) => ({ label, weight: +loadingsMatrix[0][i].toFixed(4) })),
+    pc2: FEATURE_LABELS.map((label, i) => ({ label, weight: +loadingsMatrix[1][i].toFixed(4) })),
+  },
+};
 
 // ---- merged per-player dataset for the explorer (batting + pitching + age) ----
 const pitchByName = new Map(pitchingRows.map(r => [r.name, r]));
@@ -244,6 +248,7 @@ const explorerPlayers = [...allNames].map(name => {
     bats: bio.bats ?? null, throws: bio.throws ?? null,
     country: bio.hometown ? countryOf(bio.hometown) : null,
     homeState: bio.hometown ? stateOf(bio.hometown) : null,
+    draftRound: bio.round ?? null, draftPick: bio.pick ?? null,
     G: bat.G ?? null, PA: bat.PA ?? null, AB: bat.AB ?? null, R: bat.R ?? null, H: bat.H ?? null,
     HR: bat.HR ?? null, RBI: bat.RBI ?? null, BB: bat.BB ?? null, SO: bat.SO ?? null, SB: bat.SB ?? null,
     AVG: bat.AVG ?? null, OBP: bat.OBP ?? null, SLG: bat.SLG ?? null, OPS: bat.OPS ?? null,
@@ -263,6 +268,7 @@ const result = {
   correlations, pca_explained: pcaExplained, pcaPlayers,
   sbCorrelationPoints: ageSbBatters,
   explorerPlayers, teamStats,
+  clusterLoadings, featureLabels: FEATURE_LABELS,
 };
 
 fs.writeFileSync('./output/result.json', JSON.stringify(result, null, 2));

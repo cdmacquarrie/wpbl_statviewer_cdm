@@ -8,8 +8,6 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0",
-    "ml-pca": "^4.1.1",
-    "tsne-js": "^1.0.3",
-    "umap-js": "^1.4.0"
+    "ml-pca": "^4.1.1"
   }
 }

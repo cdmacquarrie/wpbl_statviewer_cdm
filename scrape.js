@@ -59,7 +59,7 @@ async function scrapeBios() {
     const tds = $(tr).find('td').map((j, td) => $(td).text().trim()).get();
     return {
       name: tds[0], age: tds[1] ? Number(tds[1]) : null, pos: tds[2], hometown: tds[3],
-      bats: tds[4], throws: tds[5], team: tds[6], status: tds[7],
+      bats: tds[4], throws: tds[5], team: tds[6], status: tds[7], draftSelection: tds[8] || null,
       url: $(tr).attr('data-url'),
     };
   }).get();

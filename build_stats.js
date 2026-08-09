@@ -38,26 +38,67 @@ const standingsHtml = d.teams.map(t => `
           <div class="meta">${t.pct.toFixed(3).replace(/^0\./,'.')} PCT &middot; GB ${t.gb===0?'—':t.gb}</div>
         </div>`).join('');
 
-function hbarRow(rank, name, team, value, statLabel, maxValue) {
-  const width = maxValue > 0 ? (value/maxValue*100).toFixed(1) : 0;
-  return `<div class="hbar-row"><span class="rank">${rank}</span><div class="name-wrap"><span class="name"><i class="dot" style="background:${cssVar(team)}"></i>${name}</span><div class="hbar-track"><div class="hbar-fill" style="width:${width}%;background:${cssVar(team)}"></div></div></div><span class="stat">${statLabel}</span></div>`;
+function nameLink(name, url) {
+  return url ? `<a class="player-link" href="${url}" target="_blank" rel="noopener">${name}</a>` : name;
 }
 
-const top10Batters = d.qualBatters.slice(0, 10);
-const maxAvg = top10Batters[0]?.AVG || 1;
-const avgLeadersHtml = top10Batters.map(b => hbarRow(b.rank, b.name, b.team, b.AVG, `<b>${fmt3(b.AVG)}</b> ${b.H}-${b.AB}`, maxAvg)).join('');
+function hbarRow(rank, name, team, width, statLabel, url) {
+  return `<div class="hbar-row"><span class="rank">${rank}</span><div class="name-wrap"><span class="name"><i class="dot" style="background:${cssVar(team)}"></i>${nameLink(name, url)}</span><div class="hbar-track"><div class="hbar-fill" style="width:${width.toFixed(1)}%;background:${cssVar(team)}"></div></div></div><span class="stat">${statLabel}</span></div>`;
+}
 
-const top6Sb = d.sbLeaders.slice(0, 6);
-const maxSb = top6Sb[0]?.SB || 1;
-const sbLeadersHtml = top6Sb.map(b => hbarRow(b.rank, b.name, b.team, b.SB, `<b>${b.SB}</b> SB`, maxSb)).join('');
-const extraSbCount = d.sbLeaders.length - top6Sb.length;
+// Builds one ranked leaderboard card for any stat key. higherBetter=false (ERA/WHIP/BB
+// allowed/ER) inverts the bar fill so the best (lowest) value still reads as "fullest."
+function leaderboardCard(title, sub, list, key, { take = 8, fmt = v => v, higherBetter = true, unit = '' } = {}) {
+  const sorted = [...list].filter(p => p[key] != null).sort((a, b) => higherBetter ? b[key] - a[key] : a[key] - b[key]);
+  let rank = 0, prev = null;
+  sorted.forEach((r, i) => { if (r[key] !== prev) { rank = i + 1; prev = r[key]; } r._rank = rank; });
+  const top = sorted.slice(0, take);
+  const vals = top.map(p => p[key]);
+  const max = Math.max(...vals), min = Math.min(...vals);
+  const rows = top.map(p => {
+    const width = higherBetter
+      ? (max > 0 ? p[key] / max * 100 : 0)
+      : (max - min > 0 ? (max - p[key]) / (max - min) * 100 : 100);
+    return hbarRow(p._rank, p.name, p.team, width, `<b>${fmt(p[key])}</b>${unit}`, p.url);
+  }).join('');
+  const extra = sorted.length - top.length;
+  return `<div class="card">
+        <h2>${title}</h2>
+        <p class="sub">${sub}</p>
+        <div class="hbar-list">${rows}</div>
+        ${extra > 0 ? `<p class="sub" style="margin:14px 0 0;">${extra} more player${extra===1?'':'s'} not shown</p>` : ''}
+      </div>`;
+}
+
+const battingSub = 'Qualified (5+ at-bats)';
+const battingLeaderCards = [
+  leaderboardCard('Batting Average', battingSub, d.qualBatters, 'AVG', { fmt: fmt3 }),
+  leaderboardCard('On-Base Percentage', battingSub, d.qualBatters, 'OBP', { fmt: fmt3 }),
+  leaderboardCard('Slugging Percentage', battingSub, d.qualBatters, 'SLG', { fmt: fmt3 }),
+  leaderboardCard('OPS', battingSub, d.qualBatters, 'OPS', { fmt: fmt3 }),
+  leaderboardCard('Home Runs', battingSub, d.qualBatters, 'HR', { unit: ' HR' }),
+  leaderboardCard('RBI', battingSub, d.qualBatters, 'RBI', { unit: ' RBI' }),
+  leaderboardCard('Runs', battingSub, d.qualBatters, 'R', { unit: ' R' }),
+  leaderboardCard('Hits', battingSub, d.qualBatters, 'H', { unit: ' H' }),
+  leaderboardCard('Doubles', battingSub, d.qualBatters, '2B', { unit: ' 2B' }),
+  leaderboardCard('Triples', battingSub, d.qualBatters, '3B', { unit: ' 3B' }),
+  leaderboardCard('Walks', battingSub, d.qualBatters, 'BB', { unit: ' BB' }),
+  leaderboardCard('Stolen Bases', 'Top base-stealers, all players', d.sbLeaders, 'SB', { take: 6, unit: ' SB' }),
+].join('\n    ');
 
 const top8Pitchers = d.qualPitchers.slice(0, 8);
-const pitchRowsHtml = top8Pitchers.map(p => `<tr><td class="name"><div class="player-cell"><i class="dot" style="background:${cssVar(p.team)}"></i>${p.name}</div></td><td>${fmtIP(p.IP)}</td><td>${p.W}-${p.L}</td><td>${p.ERA.toFixed(2)}</td><td>${p.SO}</td><td>${p.WHIP.toFixed(2)}</td></tr>`).join('');
+const pitchRowsHtml = top8Pitchers.map(p => `<tr><td class="name"><div class="player-cell"><i class="dot" style="background:${cssVar(p.team)}"></i>${nameLink(p.name, p.url)}</div></td><td>${fmtIP(p.IP)}</td><td>${p.W}-${p.L}</td><td>${p.ERA.toFixed(2)}</td><td>${p.SO}</td><td>${p.WHIP.toFixed(2)}</td></tr>`).join('');
 
-const top6So = d.soLeaders.slice(0, 6);
-const maxSo = top6So[0]?.SO || 1;
-const soLeadersHtml = top6So.map(p => hbarRow(p.rank, p.name, p.team, p.SO, `<b>${p.SO}</b> SO`, maxSo)).join('');
+const pitchingSub = 'Qualified (2.0+ innings pitched)';
+const pitchingLeaderCards = [
+  leaderboardCard('ERA', pitchingSub, d.qualPitchers, 'ERA', { take: 6, fmt: v => v.toFixed(2), higherBetter: false }),
+  leaderboardCard('WHIP', pitchingSub, d.qualPitchers, 'WHIP', { take: 6, fmt: v => v.toFixed(2), higherBetter: false }),
+  leaderboardCard('Wins', pitchingSub, d.qualPitchers, 'W', { take: 6, unit: ' W' }),
+  leaderboardCard('Saves', pitchingSub, d.qualPitchers, 'SV', { take: 6, unit: ' SV' }),
+  leaderboardCard('Strikeouts (Pitching)', 'All qualified pitchers', d.soLeaders, 'SO', { take: 6, unit: ' SO' }),
+  leaderboardCard('Fewest Walks Allowed', pitchingSub, d.qualPitchers, 'BB', { take: 6, unit: ' BB', higherBetter: false }),
+  leaderboardCard('Fewest Earned Runs', pitchingSub, d.qualPitchers, 'ER', { take: 6, unit: ' ER', higherBetter: false }),
+].join('\n    ');
 
 const legendHtml = d.teamCodes.map(c => `<span><i style="background:var(--${c.toLowerCase()})"></i>${TEAM_NAME[c]}</span>`).join('\n      ');
 
@@ -120,6 +161,9 @@ header.page-head .cite { color: var(--text-muted); font-size: 11.5px; margin-top
 .hbar-row .stat { text-align: right; font-size: 12.5px; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .hbar-row .stat b { color: var(--text-primary); font-weight: 800; }
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.leader-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+a.player-link { color: inherit; text-decoration: none; }
+a.player-link:hover { text-decoration: underline; }
 table.pitch-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 table.pitch-table th { text-align: right; font-weight: 700; color: var(--text-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; padding: 6px 8px; border-bottom: 1px solid var(--baseline); }
 table.pitch-table th:first-child, table.pitch-table td:first-child { text-align: left; }
@@ -148,20 +192,11 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
     <div class="card"><div class="standings-grid">${standingsHtml}
       </div>
     </div>
-    <div class="section-title">Player Leaderboards</div>
-    <div class="two-col">
-      <div class="card">
-        <h2>Batting Average</h2>
-        <p class="sub">Qualified (5+ at-bats)</p>
-        <div class="hbar-list">${avgLeadersHtml}</div>
-      </div>
-      <div class="card">
-        <h2>Stolen Bases</h2>
-        <p class="sub">Top base-stealers, all players</p>
-        <div class="hbar-list">${sbLeadersHtml}</div>
-        ${extraSbCount > 0 ? `<p class="sub" style="margin:14px 0 0;">${extraSbCount} more player${extraSbCount===1?'':'s'} not shown</p>` : ''}
-      </div>
+    <div class="section-title">Batting Leaderboards</div>
+    <div class="leader-grid">
+      ${battingLeaderCards}
     </div>
+    <div class="section-title">Pitching Leaderboards</div>
     <div class="card">
       <h2>Pitching Leaders</h2>
       <p class="sub">Qualified (2.0+ innings pitched), sorted by ERA</p>
@@ -170,10 +205,8 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
         <tbody>${pitchRowsHtml}</tbody>
       </table>
     </div>
-    <div class="card">
-      <h2>Strikeout Leaders (Pitching)</h2>
-      <p class="sub">All qualified pitchers</p>
-      <div class="hbar-list">${soLeadersHtml}</div>
+    <div class="leader-grid">
+      ${pitchingLeaderCards}
     </div>
   </div>
 </div>
