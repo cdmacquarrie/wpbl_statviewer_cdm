@@ -11,6 +11,10 @@ function domain(vals, padFrac=0.12) {
   return [min - span*padFrac, max + span*padFrac];
 }
 
+function escapeAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function scatterSVG({ points, xKey, yKey, xLabel, yLabel, width=520, height=360, trend=null, xTicks=5, yTicks=5, xFmt=v=>v.toFixed(0), yFmt=v=>v.toFixed(2) }) {
   const margin = { top: 16, right: 20, bottom: 44, left: 56 };
   const plotW = width - margin.left - margin.right;
@@ -49,7 +53,8 @@ function scatterSVG({ points, xKey, yKey, xLabel, yLabel, width=520, height=360,
   points.forEach(p => {
     const cx = sx(p[xKey]), cy = sy(p[yKey]);
     const color = TEAM_COLOR[p.team] || '#888';
-    svg += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5"><title>${p.name} (${TEAM_NAME[p.team]}) — ${xLabel}: ${xFmt(p[xKey])}, ${yLabel}: ${yFmt(p[yKey])}</title></circle>`;
+    const tip = escapeAttr(`${p.name} (${TEAM_NAME[p.team]}) — ${xLabel}: ${xFmt(p[xKey])}, ${yLabel}: ${yFmt(p[yKey])}`);
+    svg += `<circle class="pt-ana" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5" data-tip="${tip}"/>`;
   });
   // axis titles
   svg += `<text x="${margin.left + plotW/2}" y="${height-6}" class="axis-title" text-anchor="middle">${xLabel}</text>`;
@@ -157,7 +162,9 @@ svg text.axis-title { font-size: 10.5px; fill: var(--text-secondary); font-famil
 svg line.gridline { stroke: var(--grid); stroke-width: 1; }
 svg line.axis-line { stroke: var(--baseline); stroke-width: 1; }
 svg line.trend-line { stroke: var(--text-secondary); stroke-width: 2; stroke-dasharray: 5 4; }
+svg circle.pt-ana { cursor: pointer; }
 .pca-note { font-size: 11.5px; color: var(--text-muted); margin-top: 8px; }
+.ana-tooltip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 1000; }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 <div class="viz-root">
@@ -230,7 +237,22 @@ svg line.trend-line { stroke: var(--text-secondary); stroke-width: 2; stroke-das
     </div>
 
   </div>
+  <div class="ana-tooltip" id="anaTooltip"></div>
 </div>
+<script>
+(function(){
+  var tip = document.getElementById('anaTooltip');
+  document.querySelectorAll('circle.pt-ana').forEach(function(c){
+    c.addEventListener('mousemove', function(e){
+      tip.textContent = c.dataset.tip;
+      tip.style.left = (e.clientX + 14) + 'px';
+      tip.style.top = (e.clientY + 10) + 'px';
+      tip.style.opacity = '1';
+    });
+    c.addEventListener('mouseleave', function(){ tip.style.opacity = '0'; });
+  });
+})();
+</script>
 `;
 
 fs.writeFileSync('./output/wpbl_analytics.html', html);
