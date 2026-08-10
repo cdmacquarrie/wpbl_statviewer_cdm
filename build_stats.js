@@ -47,69 +47,41 @@ const standingsHtml = d.teams.map(t => `
           <div class="meta">${t.pct.toFixed(3).replace(/^0\./,'.')} PCT &middot; GB ${t.gb===0?'—':t.gb}</div>
         </div>`).join('');
 
-function nameLink(name, url) {
-  return url ? `<a class="player-link" href="${url}" target="_blank" rel="noopener">${name}</a>` : name;
-}
-
-function hbarRow(rank, name, team, width, statLabel, url) {
-  return `<div class="hbar-row"><span class="rank">${rank}</span><div class="name-wrap"><span class="name"><i class="dot" style="background:${cssVar(team)}"></i>${nameLink(name, url)}</span><div class="hbar-track"><div class="hbar-fill" style="width:${width.toFixed(1)}%;background:${cssVar(team)}"></div></div></div><span class="stat">${statLabel}</span></div>`;
-}
-
-// Builds one ranked leaderboard card for any stat key. higherBetter=false (ERA/WHIP/BB
-// allowed/ER) inverts the bar fill so the best (lowest) value still reads as "fullest."
-function leaderboardCard(title, sub, list, key, { take = 8, fmt = v => v, higherBetter = true, unit = '' } = {}) {
-  const sorted = [...list].filter(p => p[key] != null).sort((a, b) => higherBetter ? b[key] - a[key] : a[key] - b[key]);
-  let rank = 0, prev = null;
-  sorted.forEach((r, i) => { if (r[key] !== prev) { rank = i + 1; prev = r[key]; } r._rank = rank; });
-  const top = sorted.slice(0, take);
-  const vals = top.map(p => p[key]);
-  const max = Math.max(...vals), min = Math.min(...vals);
-  const rows = top.map(p => {
-    const width = higherBetter
-      ? (max > 0 ? p[key] / max * 100 : 0)
-      : (max - min > 0 ? (max - p[key]) / (max - min) * 100 : 100);
-    return hbarRow(p._rank, p.name, p.team, width, `<b>${fmt(p[key])}</b>${unit}`, p.url);
-  }).join('');
-  const extra = sorted.length - top.length;
-  return `<div class="card">
-        <h2>${title}</h2>
-        <p class="sub">${sub}</p>
-        <div class="hbar-list">${rows}</div>
-        ${extra > 0 ? `<p class="sub" style="margin:14px 0 0;">${extra} more player${extra===1?'':'s'} not shown</p>` : ''}
-      </div>`;
-}
-
-const battingSub = 'Qualified (5+ at-bats)';
-const battingLeaderCards = [
-  leaderboardCard('Batting Average', battingSub, d.qualBatters, 'AVG', { fmt: fmt3 }),
-  leaderboardCard('On-Base Percentage', battingSub, d.qualBatters, 'OBP', { fmt: fmt3 }),
-  leaderboardCard('Slugging Percentage', battingSub, d.qualBatters, 'SLG', { fmt: fmt3 }),
-  leaderboardCard('OPS', battingSub, d.qualBatters, 'OPS', { fmt: fmt3 }),
-  leaderboardCard('Home Runs', battingSub, d.qualBatters, 'HR', { unit: ' HR' }),
-  leaderboardCard('RBI', battingSub, d.qualBatters, 'RBI', { unit: ' RBI' }),
-  leaderboardCard('Runs', battingSub, d.qualBatters, 'R', { unit: ' R' }),
-  leaderboardCard('Hits', battingSub, d.qualBatters, 'H', { unit: ' H' }),
-  leaderboardCard('Doubles', battingSub, d.qualBatters, '2B', { unit: ' 2B' }),
-  leaderboardCard('Triples', battingSub, d.qualBatters, '3B', { unit: ' 3B' }),
-  leaderboardCard('Walks', battingSub, d.qualBatters, 'BB', { unit: ' BB' }),
-  leaderboardCard('Stolen Bases', 'Top base-stealers, all players', d.sbLeaders, 'SB', { take: 6, unit: ' SB' }),
-].join('\n    ');
-
-const top8Pitchers = d.qualPitchers.slice(0, 8);
-const pitchRowsHtml = top8Pitchers.map(p => `<tr><td class="name"><div class="player-cell"><i class="dot" style="background:${cssVar(p.team)}"></i>${nameLink(p.name, p.url)}</div></td><td>${fmtIP(p.IP)}</td><td>${p.W}-${p.L}</td><td>${p.ERA.toFixed(2)}</td><td>${p.SO}</td><td>${p.WHIP.toFixed(2)}</td></tr>`).join('');
-
-const pitchingSub = 'Qualified (2.0+ innings pitched)';
-const pitchingLeaderCards = [
-  leaderboardCard('ERA', pitchingSub, d.qualPitchers, 'ERA', { take: 6, fmt: v => v.toFixed(2), higherBetter: false }),
-  leaderboardCard('WHIP', pitchingSub, d.qualPitchers, 'WHIP', { take: 6, fmt: v => v.toFixed(2), higherBetter: false }),
-  leaderboardCard('Wins', pitchingSub, d.qualPitchers, 'W', { take: 6, unit: ' W' }),
-  leaderboardCard('Saves', pitchingSub, d.qualPitchers, 'SV', { take: 6, unit: ' SV' }),
-  leaderboardCard('Strikeouts (Pitching)', 'All qualified pitchers', d.soLeaders, 'SO', { take: 6, unit: ' SO' }),
-  leaderboardCard('Fewest Walks Allowed', pitchingSub, d.qualPitchers, 'BB', { take: 6, unit: ' BB', higherBetter: false }),
-  leaderboardCard('Fewest Earned Runs', pitchingSub, d.qualPitchers, 'ER', { take: 6, unit: ' ER', higherBetter: false }),
-].join('\n    ');
-
 const legendHtml = d.teamCodes.map(c => `<span><i style="background:var(--${c.toLowerCase()})"></i>${TEAM_NAME[c]}</span>`).join('\n      ');
+
+// ---- leaderboard datasets + card defs, embedded for client-side re-render on toggle ----
+const battingSub = 'Qualified (5+ at-bats)';
+const pitchingSub = 'Qualified (2.0+ innings pitched)';
+const BATTING_CARDS = [
+  { title: 'Batting Average', sub: battingSub, list: 'qualBatters', key: 'AVG', take: 8, fmt: 'fmt3' },
+  { title: 'On-Base Percentage', sub: battingSub, list: 'qualBatters', key: 'OBP', take: 8, fmt: 'fmt3' },
+  { title: 'Slugging Percentage', sub: battingSub, list: 'qualBatters', key: 'SLG', take: 8, fmt: 'fmt3' },
+  { title: 'OPS', sub: battingSub, list: 'qualBatters', key: 'OPS', take: 8, fmt: 'fmt3' },
+  { title: 'Home Runs', sub: battingSub, list: 'qualBatters', key: 'HR', take: 8, unit: ' HR' },
+  { title: 'RBI', sub: battingSub, list: 'qualBatters', key: 'RBI', take: 8, unit: ' RBI' },
+  { title: 'Runs', sub: battingSub, list: 'qualBatters', key: 'R', take: 8, unit: ' R' },
+  { title: 'Hits', sub: battingSub, list: 'qualBatters', key: 'H', take: 8, unit: ' H' },
+  { title: 'Doubles', sub: battingSub, list: 'qualBatters', key: '2B', take: 8, unit: ' 2B' },
+  { title: 'Triples', sub: battingSub, list: 'qualBatters', key: '3B', take: 8, unit: ' 3B' },
+  { title: 'Walks', sub: battingSub, list: 'qualBatters', key: 'BB', take: 8, unit: ' BB' },
+  { title: 'Stolen Bases', sub: 'Top base-stealers, all players', list: 'sbLeaders', key: 'SB', take: 6, unit: ' SB' },
+];
+const PITCHING_CARDS = [
+  { title: 'ERA', sub: pitchingSub, list: 'qualPitchers', key: 'ERA', take: 6, fmt: 'fmt2', higherBetter: false },
+  { title: 'WHIP', sub: pitchingSub, list: 'qualPitchers', key: 'WHIP', take: 6, fmt: 'fmt2', higherBetter: false },
+  { title: 'Wins', sub: pitchingSub, list: 'qualPitchers', key: 'W', take: 6, unit: ' W' },
+  { title: 'Saves', sub: pitchingSub, list: 'qualPitchers', key: 'SV', take: 6, unit: ' SV' },
+  { title: 'Strikeouts (Pitching)', sub: 'All qualified pitchers', list: 'soLeaders', key: 'SO', take: 6, unit: ' SO' },
+  { title: 'Fewest Walks Allowed', sub: pitchingSub, list: 'qualPitchers', key: 'BB', take: 6, unit: ' BB', higherBetter: false },
+  { title: 'Fewest Earned Runs', sub: pitchingSub, list: 'qualPitchers', key: 'ER', take: 6, unit: ' ER', higherBetter: false },
+];
+
+const datasetsJson = JSON.stringify({
+  qualBatters: d.qualBatters, sbLeaders: d.sbLeaders, qualPitchers: d.qualPitchers, soLeaders: d.soLeaders,
+});
+const battingCardsJson = JSON.stringify(BATTING_CARDS);
+const pitchingCardsJson = JSON.stringify(PITCHING_CARDS);
+const teamColorJson = JSON.stringify(TEAM_COLOR);
 
 const html = `<title>WPBL 2026 Stats</title>
 <style>
@@ -131,9 +103,10 @@ header.page-head .kicker { font-size: 11px; font-weight: 700; letter-spacing: 0.
 header.page-head h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: -0.01em; }
 header.page-head p { margin: 0; color: var(--text-secondary); font-size: 13.5px; }
 header.page-head .cite { color: var(--text-muted); font-size: 11.5px; margin-top: 8px; }
-.legend-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 16px 0 26px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
+.legend-row { display: flex; gap: 18px; flex-wrap: wrap; margin: 16px 0 18px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.03em; font-weight: 600; }
 .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
 .legend-row i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; width: fit-content; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 12px; display: flex; align-items: center; gap: 10px; }
 .section-title::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
@@ -201,24 +174,80 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
     <div class="card"><div class="standings-grid">${standingsHtml}
       </div>
     </div>
+    <label class="toggle-row"><input type="checkbox" id="unsignedToggle" checked> Include drafted (not yet signed) players</label>
     <div class="section-title">Batting Leaderboards</div>
-    <div class="leader-grid">
-      ${battingLeaderCards}
-    </div>
+    <div class="leader-grid" id="battingLeaderGrid"></div>
     <div class="section-title">Pitching Leaderboards</div>
     <div class="card">
       <h2>Pitching Leaders</h2>
       <p class="sub">Qualified (2.0+ innings pitched), sorted by ERA</p>
       <table class="pitch-table">
         <thead><tr><th>Pitcher</th><th>IP</th><th>W-L</th><th>ERA</th><th>SO</th><th>WHIP</th></tr></thead>
-        <tbody>${pitchRowsHtml}</tbody>
+        <tbody id="pitchTableBody"></tbody>
       </table>
     </div>
-    <div class="leader-grid">
-      ${pitchingLeaderCards}
-    </div>
+    <div class="leader-grid" id="pitchingLeaderGrid"></div>
   </div>
 </div>
+<script>
+const DATA = ${datasetsJson};
+const BATTING_CARDS = ${battingCardsJson};
+const PITCHING_CARDS = ${pitchingCardsJson};
+const TEAM_COLOR = ${teamColorJson};
+const cssVar = t => 'var(--' + t.toLowerCase() + ')';
+const FMT = {
+  fmt3: v => v == null ? '\\u2014' : v.toFixed(3).replace(/^0\\./,'.').replace(/^-0\\./,'-.'),
+  fmt2: v => v == null ? '\\u2014' : v.toFixed(2),
+  raw: v => v,
+};
+
+const toggle = document.getElementById('unsignedToggle');
+
+function nameLink(name, url) {
+  return url ? '<a class="player-link" href="' + url + '" target="_blank" rel="noopener">' + name + '</a>' : name;
+}
+function hbarRow(rank, name, team, width, statLabel, url) {
+  return '<div class="hbar-row"><span class="rank">' + rank + '</span><div class="name-wrap"><span class="name"><i class="dot" style="background:' + cssVar(team) + '"></i>' + nameLink(name, url) + '</span><div class="hbar-track"><div class="hbar-fill" style="width:' + width.toFixed(1) + '%;background:' + cssVar(team) + '"></div></div></div><span class="stat">' + statLabel + '</span></div>';
+}
+function leaderboardCard(def, players) {
+  const fmt = FMT[def.fmt] || FMT.raw;
+  const higherBetter = def.higherBetter !== false;
+  const sorted = players.filter(p => p[def.key] != null).sort((a,b) => higherBetter ? b[def.key]-a[def.key] : a[def.key]-b[def.key]);
+  let rank = 0, prev = null;
+  sorted.forEach((r,i) => { if (r[def.key] !== prev) { rank = i+1; prev = r[def.key]; } r._rank = rank; });
+  const top = sorted.slice(0, def.take);
+  const vals = top.map(p => p[def.key]);
+  const max = Math.max.apply(null, vals), min = Math.min.apply(null, vals);
+  const rows = top.map(p => {
+    const width = higherBetter
+      ? (max > 0 ? p[def.key] / max * 100 : 0)
+      : (max - min > 0 ? (max - p[def.key]) / (max - min) * 100 : 100);
+    return hbarRow(p._rank, p.name, p.team, width, '<b>' + fmt(p[def.key]) + '</b>' + (def.unit||''), p.url);
+  }).join('');
+  const extra = sorted.length - top.length;
+  return '<div class="card"><h2>' + def.title + '</h2><p class="sub">' + def.sub + '</p><div class="hbar-list">' + rows + '</div>' +
+    (extra > 0 ? '<p class="sub" style="margin:14px 0 0;">' + extra + ' more player' + (extra===1?'':'s') + ' not shown</p>' : '') + '</div>';
+}
+
+function render() {
+  const includeUnsigned = toggle.checked;
+  function pool(name) {
+    const list = DATA[name];
+    return includeUnsigned ? list : list.filter(p => p.status === 'Signed');
+  }
+  document.getElementById('battingLeaderGrid').innerHTML = BATTING_CARDS.map(def => leaderboardCard(def, pool(def.list))).join('');
+  document.getElementById('pitchingLeaderGrid').innerHTML = PITCHING_CARDS.map(def => leaderboardCard(def, pool(def.list))).join('');
+
+  const topPitchers = pool('qualPitchers').slice().sort((a,b) => a.ERA - b.ERA).slice(0, 8);
+  document.getElementById('pitchTableBody').innerHTML = topPitchers.map(p =>
+    '<tr><td class="name"><div class="player-cell"><i class="dot" style="background:' + cssVar(p.team) + '"></i>' + nameLink(p.name, p.url) + '</div></td><td>' +
+    (p.IP == null ? '\\u2014' : Math.floor(p.IP) + '.' + Math.round((p.IP-Math.floor(p.IP))*3)) + '</td><td>' + p.W + '-' + p.L + '</td><td>' + p.ERA.toFixed(2) + '</td><td>' + p.SO + '</td><td>' + p.WHIP.toFixed(2) + '</td></tr>'
+  ).join('');
+}
+
+toggle.addEventListener('change', render);
+render();
+</script>
 `;
 
 fs.writeFileSync('./output/wpbl_stats.html', html);

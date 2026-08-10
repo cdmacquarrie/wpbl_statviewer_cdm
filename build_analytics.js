@@ -1,6 +1,7 @@
 const fs = require('fs');
 const raw = require('./output/result.json');
 const data = { ...raw, players: raw.pcaPlayers };
+const pcaPlayersJson = JSON.stringify(raw.pcaPlayers.map(p => ({ name: p.name, pc1: p.pc1, status: p.status })));
 
 const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
 const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
@@ -87,8 +88,11 @@ function scatterSVG({ points, xKey, yKey, xLabel, yLabel, width=520, height=360,
     const cx = sx(p[xKey]), cy = sy(p[yKey]);
     const color = TEAM_COLOR[p.team] || '#888';
     const draft = p.draftRound != null ? ` — Round ${p.draftRound}, Pick ${p.draftPick} overall` : '';
-    const tip = escapeAttr(`${p.name} (${TEAM_NAME[p.team]}) — ${xLabel}: ${xFmt(p[xKey])}, ${yLabel}: ${yFmt(p[yKey])}${draft}`);
-    svg += `<circle class="pt-ana" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5" data-tip="${tip}"/>`;
+    const linkHint = p.url ? ' — click to view profile' : '';
+    const tip = escapeAttr(`${p.name} (${TEAM_NAME[p.team]}) — ${xLabel}: ${xFmt(p[xKey])}, ${yLabel}: ${yFmt(p[yKey])}${draft}${linkHint}`);
+    const statusAttr = p.status ? ` data-status="${escapeAttr(p.status)}"` : '';
+    const urlAttr = p.url ? ` data-url="${escapeAttr(p.url)}"` : '';
+    svg += `<circle class="pt-ana" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5" data-tip="${tip}"${statusAttr}${urlAttr}/>`;
   });
   // axis titles
   svg += `<text x="${margin.left + plotW/2}" y="${height-6}" class="axis-title" text-anchor="middle">${xLabel}</text>`;
@@ -153,6 +157,7 @@ svg circle.pt-ana { cursor: pointer; }
 .loadings-fill { position: absolute; top: 1px; bottom: 1px; border-radius: 2px; }
 .loadings-legend { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 .loadings-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+.toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin: 4px 0 4px; cursor: pointer; width: fit-content; }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 <div class="viz-root">
@@ -173,13 +178,15 @@ svg circle.pt-ana { cursor: pointer; }
       <span><i style="background:var(--bos)"></i>Boston</span>
     </div>
 
+    <label class="toggle-row"><input type="checkbox" id="unsignedToggle" checked> Include drafted (not yet signed) players</label>
+
     <div class="section-title">Dimensionality Reduction — Batter Rate-Stat Profiles</div>
-    <p style="color:var(--text-secondary); font-size:12.5px; margin:-6px 0 14px;">Each of the ${data.players.length} batters is represented as a 10-dimensional vector (AVG, OBP, SLG, and R/H/HR/RBI/BB/SO/SB per plate appearance), standardized, then projected to 2D via PCA — a linear method whose axis loadings are directly interpretable, unlike nonlinear embeddings (t-SNE, UMAP), which we skip here since a handful of games per player isn't enough signal for them to say anything beyond "got a hit or didn't."</p>
+    <p style="color:var(--text-secondary); font-size:12.5px; margin:-6px 0 14px;">Each of <span id="playerCount">${data.players.length}</span> batters is represented as a 10-dimensional vector (AVG, OBP, SLG, and R/H/HR/RBI/BB/SO/SB per plate appearance), standardized, then projected to 2D via PCA — a linear method whose axis loadings are directly interpretable, unlike nonlinear embeddings (t-SNE, UMAP), which we skip here since a handful of games per player isn't enough signal for them to say anything beyond "got a hit or didn't."</p>
     <div class="card">
       <h2>PCA</h2>
       <p class="sub">Principal component analysis — linear projection</p>
       <div style="max-width:640px;">${pcaSVG}</div>
-      <p class="pca-note">PC1 explains ${(data.pca_explained[0]*100).toFixed(1)}% of variance, PC2 explains ${(data.pca_explained[1]*100).toFixed(1)}% (${((data.pca_explained[0]+data.pca_explained[1])*100).toFixed(1)}% combined). PC1 reads almost entirely as "produced offense in a tiny sample" — ${[...data.players].sort((a,b)=>b.pc1-a.pc1).slice(0,2).map(p=>p.name).join(' and ')} anchor the right edge; hitless players cluster left.</p>
+      <p class="pca-note">PC1 explains ${(data.pca_explained[0]*100).toFixed(1)}% of variance, PC2 explains ${(data.pca_explained[1]*100).toFixed(1)}% (${((data.pca_explained[0]+data.pca_explained[1])*100).toFixed(1)}% combined). PC1 reads almost entirely as "produced offense in a tiny sample" — <span id="pc1Leaders">${[...data.players].sort((a,b)=>b.pc1-a.pc1).slice(0,2).map(p=>p.name).join(' and ')}</span> anchor the right edge; hitless players cluster left.</p>
       <div class="grid2">
         <div>
           <div class="loadings-title">PC1 loadings — driven by ${topSentence(data.clusterLoadings.pca.pc1)}</div>
@@ -190,7 +197,7 @@ svg circle.pt-ana { cursor: pointer; }
           ${loadingsBars(data.clusterLoadings.pca.pc2)}
         </div>
       </div>
-      <p class="loadings-legend"><i style="background:var(--load-pos)"></i>positive weight &nbsp; <i style="background:var(--load-neg)"></i>negative weight — each bar is that stat's contribution to the component, in standardized units.</p>
+      <p class="loadings-legend"><i style="background:var(--load-pos)"></i>positive weight &nbsp; <i style="background:var(--load-neg)"></i>negative weight — each bar is that stat's contribution to the component, in standardized units. Loadings are fit on the full population and don't change with the toggle above.</p>
     </div>
 
   </div>
@@ -198,8 +205,14 @@ svg circle.pt-ana { cursor: pointer; }
 </div>
 <script>
 (function(){
+  var PCA_PLAYERS = ${pcaPlayersJson};
   var tip = document.getElementById('anaTooltip');
-  document.querySelectorAll('circle.pt-ana').forEach(function(c){
+  var toggle = document.getElementById('unsignedToggle');
+  var countEl = document.getElementById('playerCount');
+  var leadersEl = document.getElementById('pc1Leaders');
+  var circles = document.querySelectorAll('circle.pt-ana');
+
+  circles.forEach(function(c){
     c.addEventListener('mousemove', function(e){
       tip.textContent = c.dataset.tip;
       tip.style.left = (e.clientX + 14) + 'px';
@@ -207,7 +220,24 @@ svg circle.pt-ana { cursor: pointer; }
       tip.style.opacity = '1';
     });
     c.addEventListener('mouseleave', function(){ tip.style.opacity = '0'; });
+    c.addEventListener('click', function(){
+      if (c.dataset.url) window.open(c.dataset.url, '_blank', 'noopener');
+    });
   });
+
+  function applyToggle(){
+    var includeUnsigned = toggle.checked;
+    circles.forEach(function(c){
+      var visible = includeUnsigned || c.dataset.status === 'Signed';
+      c.style.display = visible ? '' : 'none';
+    });
+    var visiblePlayers = PCA_PLAYERS.filter(function(p){ return includeUnsigned || p.status === 'Signed'; });
+    countEl.textContent = visiblePlayers.length;
+    var top2 = [...visiblePlayers].sort(function(a,b){ return b.pc1 - a.pc1; }).slice(0,2).map(function(p){ return p.name; });
+    leadersEl.textContent = top2.join(' and ');
+  }
+  toggle.addEventListener('change', applyToggle);
+  applyToggle();
 })();
 </script>
 `;

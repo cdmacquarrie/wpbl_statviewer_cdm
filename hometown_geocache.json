@@ -273,5 +273,241 @@
     "lat": 34.6937569,
     "lon": 135.5014539,
     "distanceFromSpringfieldMi": 6541.1
+  },
+  "Fairfax, Virginia, USA": {
+    "lat": 38.8462236,
+    "lon": -77.3063733,
+    "distanceFromSpringfieldMi": 662.5
+  },
+  "Palm Beach Gardens, Florida, USA": {
+    "lat": 26.8233946,
+    "lon": -80.1386547,
+    "distanceFromSpringfieldMi": 1048.9
+  },
+  "Canberra, Australia": {
+    "lat": -35.2975906,
+    "lon": 149.1012676,
+    "distanceFromSpringfieldMi": 9261
+  },
+  "Royal Oak, Michigan, USA": {
+    "lat": 42.4894801,
+    "lon": -83.1446485,
+    "distanceFromSpringfieldMi": 386.6
+  },
+  "Watertown, Massachusetts, USA": {
+    "lat": 42.3652576,
+    "lon": -71.1843234,
+    "distanceFromSpringfieldMi": 976.2
+  },
+  "Juncos, Puerto Rico": {
+    "lat": 18.2066971,
+    "lon": -65.9139804,
+    "distanceFromSpringfieldMi": 2055.7
+  },
+  "Washington, District of Columbia, USA": {
+    "lat": 38.8950982,
+    "lon": -77.0363849,
+    "distanceFromSpringfieldMi": 676.3
+  },
+  "Silver Spring, Maryland, USA": {
+    "lat": 38.9997621,
+    "lon": -77.0240371,
+    "distanceFromSpringfieldMi": 675.8
+  },
+  "Puerto Vallarta, Mexico": {
+    "lat": 20.6407176,
+    "lon": -105.220306,
+    "distanceFromSpringfieldMi": 1611.1
+  },
+  "Chicago, Illinois, USA": {
+    "lat": 41.8755616,
+    "lon": -87.6244212,
+    "distanceFromSpringfieldMi": 179.3
+  },
+  "Perris, California, USA": {
+    "lat": 33.7818729,
+    "lon": -117.2298477,
+    "distanceFromSpringfieldMi": 1574.6
+  },
+  "Fort Mcmurray, Alberta, Canada": {
+    "lat": 56.7291997,
+    "lon": -111.3885221,
+    "distanceFromSpringfieldMi": 1526.3
+  },
+  "USA": {
+    "lat": 39.7837304,
+    "lon": -100.445882,
+    "distanceFromSpringfieldMi": 572.9
+  },
+  "Sun Prairie, Wisconsin, USA": {
+    "lat": 43.183278,
+    "lon": -89.2128297,
+    "distanceFromSpringfieldMi": 236.1
+  },
+  "Montmorency, Australia": {
+    "lat": -37.7189715,
+    "lon": 145.1256231,
+    "distanceFromSpringfieldMi": 9528.7
+  },
+  "Belmont, Massachusetts, USA": {
+    "lat": 42.3959296,
+    "lon": -71.1786655,
+    "distanceFromSpringfieldMi": 976.7
+  },
+  "Saitama City, Japan": {
+    "lat": 35.8428014,
+    "lon": 139.8544081,
+    "distanceFromSpringfieldMi": 6336.7
+  },
+  "Sebastopol, California, USA": {
+    "lat": 38.4021038,
+    "lon": -122.824222,
+    "distanceFromSpringfieldMi": 1771.4
+  },
+  "Madera, California, USA": {
+    "lat": 37.1716264,
+    "lon": -119.7737991,
+    "distanceFromSpringfieldMi": 1631.6
+  },
+  "Newport, Michigan, USA": {
+    "lat": 42.0022672,
+    "lon": -83.3085419,
+    "distanceFromSpringfieldMi": 364.9
+  },
+  "Welland, Ontario, Canada": {
+    "lat": 42.9922181,
+    "lon": -79.2484192,
+    "distanceFromSpringfieldMi": 582.5
+  },
+  "Oakville, Ontario, Canada": {
+    "lat": 43.447436,
+    "lon": -79.666672,
+    "distanceFromSpringfieldMi": 574
+  },
+  "Saskatoon, Saskatchewan, Canada": {
+    "lat": 52.131802,
+    "lon": -106.660767,
+    "distanceFromSpringfieldMi": 1175.7
+  },
+  "Ontario, California, USA": {
+    "lat": 34.065846,
+    "lon": -117.64843,
+    "distanceFromSpringfieldMi": 1589
+  },
+  "Fort Walton Beach, Florida, USA": {
+    "lat": 30.4057552,
+    "lon": -86.618842,
+    "distanceFromSpringfieldMi": 670
+  },
+  "Billings, Montana, USA": {
+    "lat": 45.7874957,
+    "lon": -108.49607,
+    "distanceFromSpringfieldMi": 1038.6
+  },
+  "Ravena, New York, USA": {
+    "lat": 42.4684148,
+    "lon": -73.8162354,
+    "distanceFromSpringfieldMi": 843.4
+  },
+  "London, United Kingdom": {
+    "lat": 51.5074456,
+    "lon": -0.1277653,
+    "distanceFromSpringfieldMi": 4123.7
+  },
+  "Phoenix, Arizona, USA": {
+    "lat": 33.4484367,
+    "lon": -112.074141,
+    "distanceFromSpringfieldMi": 1314.1
+  },
+  "Tijuana, Mexico": {
+    "lat": 32.5317397,
+    "lon": -117.019529,
+    "distanceFromSpringfieldMi": 1599.5
+  },
+  "Lagos de Moreno, Jalisco, Mexico": {
+    "lat": 21.5330301,
+    "lon": -101.8199571,
+    "distanceFromSpringfieldMi": 1450.3
+  },
+  "Louviers, France": {
+    "lat": 49.2157245,
+    "lon": 1.1646335,
+    "distanceFromSpringfieldMi": 4248.4
+  },
+  "Cincinnati, Ohio, USA": {
+    "lat": 39.1012809,
+    "lon": -84.5127405,
+    "distanceFromSpringfieldMi": 278.1
+  },
+  "Danbury, Connecticut, USA": {
+    "lat": 41.394817,
+    "lon": -73.4540111,
+    "distanceFromSpringfieldMi": 855.8
+  },
+  "Oakville, Missouri, USA": {
+    "lat": 38.4392708,
+    "lon": -90.3160071,
+    "distanceFromSpringfieldMi": 99.4
+  },
+  "Livermore, California, USA": {
+    "lat": 37.6820583,
+    "lon": -121.768053,
+    "distanceFromSpringfieldMi": 1727.9
+  },
+  "Barquisimeto, Venezuela": {
+    "lat": 10.0774374,
+    "lon": -69.3222293,
+    "distanceFromSpringfieldMi": 2402.2
+  },
+  "Cicero, New York, USA": {
+    "lat": 43.1756235,
+    "lon": -76.1193678,
+    "distanceFromSpringfieldMi": 737.6
+  },
+  "Brooklyn, New York, USA": {
+    "lat": 40.6526006,
+    "lon": -73.9497211,
+    "distanceFromSpringfieldMi": 829.4
+  },
+  "Arglington, Texas, USA": null,
+  "Austin, Texas, USA": {
+    "lat": 30.2711286,
+    "lon": -97.7436995,
+    "distanceFromSpringfieldMi": 800.1
+  },
+  "La Crescenta, California, USA": {
+    "lat": 34.230429,
+    "lon": -118.2350733,
+    "distanceFromSpringfieldMi": 1615.7
+  },
+  "Akron, Ohio, USA": {
+    "lat": 41.083064,
+    "lon": -81.518485,
+    "distanceFromSpringfieldMi": 436.8
+  },
+  "Oakhurst, California, USA": {
+    "lat": 37.333178,
+    "lon": -119.6572441,
+    "distanceFromSpringfieldMi": 1622.5
+  },
+  "Pleasantville, New York, USA": {
+    "lat": 41.1328736,
+    "lon": -73.7926335,
+    "distanceFromSpringfieldMi": 837.7
+  },
+  "Rivière-Du-Loup, Québec, Canada": {
+    "lat": 47.8541229,
+    "lon": -69.5333016,
+    "distanceFromSpringfieldMi": 1142.7
+  },
+  "Granger, Indiana, USA": {
+    "lat": 41.735251,
+    "lon": -86.1062763,
+    "distanceFromSpringfieldMi": 229.4
+  },
+  "Sapulpa, Oklahoma, USA": {
+    "lat": 36.0005035,
+    "lon": -96.1049612,
+    "distanceFromSpringfieldMi": 438.1
   }
 }

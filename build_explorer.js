@@ -149,6 +149,10 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
         <input type="checkbox" id="qualToggle">
         <label for="qualToggle">Qualified only (5+ AB for batting stats, 2+ IP for pitching stats)</label>
       </div>
+      <div class="control-group checkbox" id="unsignedGroup">
+        <input type="checkbox" id="unsignedToggle" checked>
+        <label for="unsignedToggle">Include drafted (not yet signed) players</label>
+      </div>
     </div>
 
     <div class="legend-row">
@@ -178,6 +182,8 @@ const xSelect = document.getElementById('xSelect');
 const ySelect = document.getElementById('ySelect');
 const qualToggle = document.getElementById('qualToggle');
 const qualGroup = document.getElementById('qualGroup');
+const unsignedToggle = document.getElementById('unsignedToggle');
+const unsignedGroup = document.getElementById('unsignedGroup');
 const swapBtn = document.getElementById('swapBtn');
 const chartHost = document.getElementById('chartHost');
 const badgesEl = document.getElementById('badges');
@@ -209,6 +215,7 @@ buildOptions(ySelect, 'OPS');
 levelSelect.addEventListener('change', () => {
   const isTeam = levelSelect.value === 'team';
   qualGroup.style.display = isTeam ? 'none' : '';
+  unsignedGroup.style.display = isTeam ? 'none' : '';
   buildOptions(xSelect, isTeam ? 'pctUSA' : 'age');
   buildOptions(ySelect, isTeam ? 'pct' : 'OPS');
   render();
@@ -308,8 +315,10 @@ function render() {
   const xKey = xSelect.value, yKey = ySelect.value;
   const xDef = map[xKey], yDef = map[yKey];
   const qualOnly = !isTeam && qualToggle.checked;
+  const includeUnsigned = isTeam || unsignedToggle.checked;
 
   let pts = currentDataset().filter(p => p[xKey] != null && p[yKey] != null && p.team);
+  if (!includeUnsigned) pts = pts.filter(p => p.status === 'Signed');
   if (qualOnly) pts = pts.filter(p => isQualified(p, xDef, yDef));
 
   if (pts.length < 2) {
@@ -384,12 +393,17 @@ function render() {
     circle.addEventListener('mousemove', (e) => {
       const p = pts[+circle.dataset.i];
       const who = isTeam ? p.name : \`\${p.name} (\${TEAM_NAME[p.team]})\`;
-      tooltip.textContent = \`\${who} — \${xDef.label}: \${displayVal(p, xKey, xDef)}, \${yDef.label}: \${displayVal(p, yKey, yDef)}\`;
+      const linkHint = !isTeam && p.url ? ' — click to view profile' : '';
+      tooltip.textContent = \`\${who} — \${xDef.label}: \${displayVal(p, xKey, xDef)}, \${yDef.label}: \${displayVal(p, yKey, yDef)}\${linkHint}\`;
       tooltip.style.left = (e.offsetX + 14) + 'px';
       tooltip.style.top = (e.offsetY + 8) + 'px';
       tooltip.style.opacity = '1';
     });
     circle.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+    circle.addEventListener('click', () => {
+      const p = pts[+circle.dataset.i];
+      if (!isTeam && p.url) window.open(p.url, '_blank', 'noopener');
+    });
   });
   chartHost.style.position = 'relative';
 }
@@ -460,6 +474,7 @@ function renderBarChart(pts, catKey, numKey, catDef, numDef, isTeam) {
 xSelect.addEventListener('change', render);
 ySelect.addEventListener('change', render);
 qualToggle.addEventListener('change', render);
+unsignedToggle.addEventListener('change', render);
 swapBtn.addEventListener('click', () => {
   const x = xSelect.value, y = ySelect.value;
   buildOptions(xSelect, y);

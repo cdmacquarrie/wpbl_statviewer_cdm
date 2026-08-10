@@ -9,42 +9,15 @@ const cssVar = t => `var(--${t.toLowerCase()})`;
 const scrapedDate = new Date(d.scrapedAt);
 const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-const maxBucket = Math.max(...d.bio.ageDist.map(b => b.count));
-const histHtml = d.bio.ageDist.map(b => `<div class="hist-col"><span class="val">${b.count}</span><div class="bar" style="height:${maxBucket>0?(b.count/maxBucket*100):0}%"></div></div>`).join('');
-const histLabelsHtml = d.bio.ageDist.map(b => `<span>${b.label}</span>`).join('');
-
-const maxCountry = d.bio.nationality[0]?.count || 1;
-const nationalityHtml = d.bio.nationality.map((n, i) => `
-          <div class="hbar-row"><div class="name-wrap"><span class="name">${n.country}</span><div class="hbar-track"><div class="hbar-fill" style="width:${(n.count/maxCountry*100).toFixed(1)}%;background:${S_PALETTE[i % S_PALETTE.length]}"></div></div></div><span class="stat"><b>${n.count}</b> player${n.count===1?'':'s'}</span></div>`).join('');
-
-const teamAgeHtml = d.bio.avgAgeByTeam.map(t => `
-          <div class="team-age-tile"><div class="dot-row"><i class="dot" style="background:${cssVar(t.team)}"></i><span class="city">${t.team}</span></div><div class="n">${t.avgAge.toFixed(1)}</div><div class="l">avg age</div></div>`).join('');
-
-function segBar(splits, labelMap) {
-  const total = Object.values(splits).reduce((a,b)=>a+b,0);
-  const entries = Object.entries(splits).sort((a,b)=>b[1]-a[1]);
-  const colors = ['#1d4fd6', '#eb6834', '#1f7a45', '#eda100'];
-  const bar = entries.map(([k,v],i) => `<div style="width:${(v/total*100).toFixed(1)}%;background:${colors[i%colors.length]}">${v/total > 0.12 ? `${labelMap[k]||k} · ${v}` : ''}</div>`).join('');
-  const legend = entries.map(([k,v],i) => `<span><i style="background:${colors[i%colors.length]}"></i>${labelMap[k]||k} (${v})</span>`).join('');
-  return { bar, legend };
-}
-const batsSeg = segBar(d.bio.batsSplit, { R: 'Right', L: 'Left', S: 'Switch' });
-const throwsSeg = segBar(d.bio.throwsSplit, { R: 'Right', L: 'Left' });
-
-function fmtDraft(p) {
-  return p.round != null ? `R${p.round} · #${p.pickOverall}` : '—';
-}
-const rosterHtml = d.bio.rosterByTeam.map(team => {
-  const signedCount = team.players.filter(p => p.status === 'Signed').length;
-  return `
-        <div class="roster-panel">
-          <h3><i class="dot" style="background:${cssVar(team.team)}"></i>${TEAM_NAME[team.team]} <span class="roster-count" data-total="${team.players.length}" data-signed="${signedCount}">(${team.players.length})</span></h3>
-          <table class="roster-table">
-            <thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th><th>Draft</th><th>Status</th></tr></thead>
-            <tbody>${team.players.map(p => `<tr class="${p.status==='Signed'?'':'unsigned'}"><td>${p.name}</td><td class="age">${p.age ?? '—'}</td><td>${p.pos}</td><td>${p.hometown}</td><td class="bt">${p.bats}/${p.throws}</td><td class="bt">${fmtDraft(p)}</td><td class="status">${p.status}</td></tr>`).join('')}</tbody>
-          </table>
-        </div>`;
-}).join('');
+// Flat per-player list (all teams) — the client recomputes every aggregate below
+// from this when the Signed/Drafted toggle changes, so nothing on the page is
+// server-frozen to one toggle state.
+const ALL_PLAYERS = d.bio.rosterByTeam.flatMap(t => t.players.map(p => ({ ...p, team: t.team })));
+const playersJson = JSON.stringify(ALL_PLAYERS);
+const teamCodesJson = JSON.stringify(d.teamCodes);
+const teamColorJson = JSON.stringify(TEAM_COLOR);
+const teamNameJson = JSON.stringify(TEAM_NAME);
+const paletteJson = JSON.stringify(S_PALETTE);
 
 const html = `<title>WPBL 2026 Player Bios</title>
 <style>
@@ -60,10 +33,11 @@ const html = `<title>WPBL 2026 Player Bios</title>
 }
 .viz-root * { box-sizing: border-box; }
 .wrap { max-width: 1080px; margin: 0 auto; }
-header.page-head { margin-bottom: 24px; }
+header.page-head { margin-bottom: 18px; }
 header.page-head h1 { font-size: 22px; margin: 0 0 4px; letter-spacing: -0.01em; }
 header.page-head p { margin: 0; color: var(--text-secondary); font-size: 13.5px; }
 header.page-head .cite { color: var(--text-muted); font-size: 12px; margin-top: 6px; }
+.toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 20px; cursor: pointer; width: fit-content; }
 .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
 .stat-tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; }
 .stat-tile .n { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; }
@@ -103,7 +77,6 @@ header.page-head .cite { color: var(--text-muted); font-size: 12px; margin-top: 
 .roster-panel h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 10px; }
 .roster-panel h3 i.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
 .roster-panel h3 .roster-count { font-weight: 400; color: var(--text-muted); font-size: 12.5px; }
-.toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); margin: -8px 0 14px; cursor: pointer; }
 table.roster-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 22px; }
 table.roster-table th { text-align: left; font-weight: 600; color: var(--text-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.02em; padding: 5px 6px; border-bottom: 1px solid var(--baseline); }
 table.roster-table td { padding: 6px 6px; border-bottom: 1px solid var(--grid); color: var(--text-primary); }
@@ -112,67 +85,143 @@ table.roster-table td.status { font-size: 11px; color: var(--text-muted); }
 table.roster-table tr.unsigned td { color: var(--text-muted); }
 table.roster-table tr.unsigned td.status { font-style: italic; }
 table.roster-table tbody tr:last-child td { border-bottom: none; }
+a.player-link { color: inherit; text-decoration: none; }
+a.player-link:hover { text-decoration: underline; }
 @media (max-width: 760px) { .stat-row { grid-template-columns: repeat(2, 1fr); } .team-age-grid { grid-template-columns: repeat(2, 1fr); } .two-col, .roster-grid { grid-template-columns: 1fr; } }
 </style>
 <div class="viz-root">
   <div class="wrap">
     <header class="page-head">
       <h1>WPBL 2026 — Player Bios &amp; Demographics</h1>
-      <p>All ${d.bio.total} drafted players across Los Angeles, New York, San Francisco &amp; Boston — ${d.bio.signedCount} signed, ${d.bio.draftedCount} drafted and not yet signed</p>
+      <p id="headSub"></p>
       <p class="cite">Source: womensprobaseballleague.com/prospect-ranking (full Drafted Players list, Signed + Drafted status) — through ${dateStr} · auto-updated daily. Site does not publish height/weight.</p>
     </header>
-    <div class="stat-row">
-      <div class="stat-tile"><div class="n">${d.bio.avgAge.toFixed(1)}</div><div class="l">Average age</div></div>
-      <div class="stat-tile"><div class="n">${d.bio.medianAge}</div><div class="l">Median age</div></div>
-      <div class="stat-tile"><div class="n">${d.bio.minAge}–${d.bio.maxAge}</div><div class="l">Age range</div></div>
-      <div class="stat-tile"><div class="n">${d.bio.countryCount}</div><div class="l">Countries represented</div></div>
-    </div>
+    <label class="toggle-row"><input type="checkbox" id="showUnsigned" checked> Include drafted (not yet signed) players</label>
+    <div class="stat-row" id="statRow"></div>
     <div class="card">
       <h2>Age Distribution</h2>
-      <p class="sub">All ${d.bio.total} drafted players, league-wide</p>
-      <div class="hist">${histHtml}</div>
-      <div class="hist-labels">${histLabelsHtml}</div>
+      <p class="sub" id="histSub"></p>
+      <div class="hist" id="hist"></div>
+      <div class="hist-labels" id="histLabels"></div>
     </div>
     <div class="two-col">
       <div class="card">
         <h2>Hometown Country</h2>
         <p class="sub">Where each player calls home</p>
-        <div class="hbar-list">${nationalityHtml}</div>
+        <div class="hbar-list" id="nationalityList"></div>
       </div>
       <div class="card">
         <h2>Average Age by Team</h2>
         <p class="sub">Years</p>
-        <div class="team-age-grid">${teamAgeHtml}</div>
+        <div class="team-age-grid" id="teamAgeGrid"></div>
         <div style="margin-top:20px;">
-          <div class="seg-block"><h4>Bats</h4><div class="seg-bar">${batsSeg.bar}</div><div class="seg-legend">${batsSeg.legend}</div></div>
-          <div class="seg-block"><h4>Throws</h4><div class="seg-bar">${throwsSeg.bar}</div><div class="seg-legend">${throwsSeg.legend}</div></div>
+          <div class="seg-block"><h4>Bats</h4><div class="seg-bar" id="batsSegBar"></div><div class="seg-legend" id="batsSegLegend"></div></div>
+          <div class="seg-block"><h4>Throws</h4><div class="seg-bar" id="throwsSegBar"></div><div class="seg-legend" id="throwsSegLegend"></div></div>
         </div>
       </div>
     </div>
     <div class="card">
       <h2>Full Roster</h2>
-      <p class="sub">All ${d.bio.total} drafted players, sorted by age within team — greyed rows are drafted but not yet signed</p>
-      <label class="toggle-row"><input type="checkbox" id="showUnsigned" checked> Include drafted (not yet signed) players</label>
-      <div class="roster-grid">${rosterHtml}</div>
+      <p class="sub" id="rosterSub"></p>
+      <div class="roster-grid" id="rosterGrid"></div>
     </div>
   </div>
 </div>
 <script>
-(function(){
-  var toggle = document.getElementById('showUnsigned');
-  function apply(){
-    var show = toggle.checked;
-    document.querySelectorAll('table.roster-table tr.unsigned').forEach(function(tr){
-      tr.style.display = show ? '' : 'none';
-    });
-    document.querySelectorAll('.roster-count').forEach(function(el){
-      var n = show ? el.dataset.total : el.dataset.signed;
-      el.textContent = '(' + n + ')';
-    });
+const ALL_PLAYERS = ${playersJson};
+const TEAM_CODES = ${teamCodesJson};
+const TEAM_COLOR = ${teamColorJson};
+const TEAM_NAME = ${teamNameJson};
+const S_PALETTE = ${paletteJson};
+const AGE_BUCKETS = [[18,21],[22,25],[26,29],[30,33],[34,38]];
+
+const toggle = document.getElementById('showUnsigned');
+
+function nameLink(p) {
+  return p.url ? '<a class="player-link" href="' + p.url + '" target="_blank" rel="noopener">' + p.name + '</a>' : p.name;
+}
+function fmtDraft(p) {
+  return p.round != null ? 'R' + p.round + ' \\u00b7 #' + p.pickOverall : '\\u2014';
+}
+function countryOf(hometown) {
+  if (!hometown) return 'Unknown';
+  const parts = hometown.split(',').map(s => s.trim());
+  return parts[parts.length - 1];
+}
+
+function render() {
+  const includeUnsigned = toggle.checked;
+  const players = includeUnsigned ? ALL_PLAYERS : ALL_PLAYERS.filter(p => p.status === 'Signed');
+  const signedCount = ALL_PLAYERS.filter(p => p.status === 'Signed').length;
+  const draftedCount = ALL_PLAYERS.length - signedCount;
+
+  document.getElementById('headSub').textContent = 'All ' + ALL_PLAYERS.length + ' drafted players across Los Angeles, New York, San Francisco & Boston \\u2014 ' + signedCount + ' signed, ' + draftedCount + ' drafted and not yet signed';
+  document.getElementById('histSub').textContent = players.length + ' players, league-wide' + (includeUnsigned ? '' : ' (signed only)');
+  document.getElementById('rosterSub').textContent = players.length + ' players, sorted by age within team' + (includeUnsigned ? ' \\u2014 greyed rows are drafted but not yet signed' : ' (signed only)');
+
+  // ---- stat tiles ----
+  const ages = players.map(p => p.age).filter(a => a != null);
+  const avgAge = ages.reduce((a,b)=>a+b,0) / (ages.length || 1);
+  const sortedAges = [...ages].sort((a,b)=>a-b);
+  const medianAge = sortedAges.length ? (sortedAges.length % 2 ? sortedAges[(sortedAges.length-1)/2] : (sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2) : 0;
+  const countries = new Set(players.map(p => countryOf(p.hometown)));
+  document.getElementById('statRow').innerHTML =
+    '<div class="stat-tile"><div class="n">' + avgAge.toFixed(1) + '</div><div class="l">Average age</div></div>' +
+    '<div class="stat-tile"><div class="n">' + medianAge + '</div><div class="l">Median age</div></div>' +
+    '<div class="stat-tile"><div class="n">' + (ages.length?Math.min(...ages):'\\u2014') + '\\u2013' + (ages.length?Math.max(...ages):'\\u2014') + '</div><div class="l">Age range</div></div>' +
+    '<div class="stat-tile"><div class="n">' + countries.size + '</div><div class="l">Countries represented</div></div>';
+
+  // ---- age histogram ----
+  const ageDist = AGE_BUCKETS.map(([lo,hi]) => ({ label: lo + '\\u2013' + hi, count: ages.filter(a => a >= lo && a <= hi).length }));
+  const maxBucket = Math.max(...ageDist.map(b => b.count), 1);
+  document.getElementById('hist').innerHTML = ageDist.map(b => '<div class="hist-col"><span class="val">' + b.count + '</span><div class="bar" style="height:' + (b.count/maxBucket*100) + '%"></div></div>').join('');
+  document.getElementById('histLabels').innerHTML = ageDist.map(b => '<span>' + b.label + '</span>').join('');
+
+  // ---- nationality ----
+  const countryCounts = {};
+  players.forEach(p => { const c = countryOf(p.hometown); countryCounts[c] = (countryCounts[c]||0)+1; });
+  const nationality = Object.entries(countryCounts).sort((a,b)=>b[1]-a[1]);
+  const maxCountry = nationality[0]?.[1] || 1;
+  document.getElementById('nationalityList').innerHTML = nationality.map(([country,count],i) =>
+    '<div class="hbar-row"><div class="name-wrap"><span class="name">' + country + '</span><div class="hbar-track"><div class="hbar-fill" style="width:' + (count/maxCountry*100).toFixed(1) + '%;background:' + S_PALETTE[i % S_PALETTE.length] + '"></div></div></div><span class="stat"><b>' + count + '</b> player' + (count===1?'':'s') + '</span></div>'
+  ).join('');
+
+  // ---- avg age by team ----
+  document.getElementById('teamAgeGrid').innerHTML = TEAM_CODES.map(code => {
+    const list = players.filter(p => p.team === code && p.age != null);
+    const avg = list.length ? list.reduce((a,b)=>a+b.age,0)/list.length : 0;
+    return '<div class="team-age-tile"><div class="dot-row"><i class="dot" style="background:var(--' + code.toLowerCase() + ')"></i><span class="city">' + code + '</span></div><div class="n">' + avg.toFixed(1) + '</div><div class="l">avg age</div></div>';
+  }).join('');
+
+  // ---- bats/throws splits ----
+  function segBar(field, labelMap) {
+    const counts = {};
+    players.forEach(p => { const v = p[field] || 'Unknown'; counts[v] = (counts[v]||0)+1; });
+    const total = Object.values(counts).reduce((a,b)=>a+b,0) || 1;
+    const entries = Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    const colors = ['#1d4fd6', '#eb6834', '#1f7a45', '#eda100'];
+    const bar = entries.map(([k,v],i) => '<div style="width:' + (v/total*100).toFixed(1) + '%;background:' + colors[i%colors.length] + '">' + (v/total > 0.12 ? (labelMap[k]||k) + ' \\u00b7 ' + v : '') + '</div>').join('');
+    const legend = entries.map(([k,v],i) => '<span><i style="background:' + colors[i%colors.length] + '"></i>' + (labelMap[k]||k) + ' (' + v + ')</span>').join('');
+    return { bar, legend };
   }
-  toggle.addEventListener('change', apply);
-  apply();
-})();
+  const batsSeg = segBar('bats', { R: 'Right', L: 'Left', S: 'Switch' });
+  const throwsSeg = segBar('throws', { R: 'Right', L: 'Left' });
+  document.getElementById('batsSegBar').innerHTML = batsSeg.bar;
+  document.getElementById('batsSegLegend').innerHTML = batsSeg.legend;
+  document.getElementById('throwsSegBar').innerHTML = throwsSeg.bar;
+  document.getElementById('throwsSegLegend').innerHTML = throwsSeg.legend;
+
+  // ---- full roster ----
+  document.getElementById('rosterGrid').innerHTML = TEAM_CODES.map(code => {
+    const list = players.filter(p => p.team === code).sort((a,b) => (b.age||0) - (a.age||0));
+    const rows = list.map(p => '<tr class="' + (p.status==='Signed'?'':'unsigned') + '"><td>' + nameLink(p) + '</td><td class="age">' + (p.age ?? '\\u2014') + '</td><td>' + p.pos + '</td><td>' + p.hometown + '</td><td class="bt">' + p.bats + '/' + p.throws + '</td><td class="bt">' + fmtDraft(p) + '</td><td class="status">' + p.status + '</td></tr>').join('');
+    return '<div class="roster-panel"><h3><i class="dot" style="background:var(--' + code.toLowerCase() + ')"></i>' + TEAM_NAME[code] + ' <span class="roster-count">(' + list.length + ')</span></h3>' +
+      '<table class="roster-table"><thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th><th>Draft</th><th>Status</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }).join('');
+}
+
+toggle.addEventListener('change', render);
+render();
 </script>
 `;
 

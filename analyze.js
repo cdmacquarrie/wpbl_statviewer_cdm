@@ -28,8 +28,8 @@ function parseDraft(sel) {
   return { round, pick, pickOverall: (round - 1) * ROUND_SIZE + pick };
 }
 const bioMap = new Map(raw.bios.map(b => [b.name, {
-  age: b.age, bats: b.bats, throws: b.throws, hometown: b.hometown,
-  team: slugTeam(b.team), status: b.status, ...parseDraft(b.draftSelection),
+  age: b.age, pos: b.pos, bats: b.bats, throws: b.throws, hometown: b.hometown,
+  team: slugTeam(b.team), status: b.status, url: b.url, ...parseDraft(b.draftSelection),
 }]));
 
 // ---- batting / pitching: normalize field names, attach bio ----
@@ -45,7 +45,7 @@ const battingRows = raw.battingRaw.map(r => {
     HR: num(r.home_runs), RBI: num(r.rbi), BB: num(r.walks), SO: num(r.strikeouts),
     SB: num(r.stolen_bases), AVG: num(r.average), OBP: num(r.on_base_percentage),
     SLG: num(r.slugging_percentage), OPS: num(r.ops),
-    age: bio.age ?? null, bats: bio.bats ?? null,
+    age: bio.age ?? null, bats: bio.bats ?? null, status: bio.status ?? null,
   };
 });
 
@@ -57,7 +57,7 @@ const pitchingRows = raw.pitchingRaw.map(r => {
     ERA: num(r.era), IP: parseIPvalue(num(r.innings_pitched)), H: num(r.hits_allowed),
     R: num(r.runs_allowed), ER: num(r.earned_runs), HR: num(r.home_runs_allowed),
     BB: num(r.walks), SO: num(r.strikeouts), SV: num(r.saves), WHIP: num(r.whip),
-    age: bio.age ?? null,
+    age: bio.age ?? null, status: bio.status ?? null,
   };
 });
 
@@ -160,7 +160,7 @@ const rosterByTeam = teamCodes.map(code => ({
   team: code,
   players: allBios.filter(b => b.teamCode === code)
     .sort((a,b) => (b.age||0) - (a.age||0))
-    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws, status: b.status, ...parseDraft(b.draftSelection) })),
+    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws, status: b.status, url: b.url, ...parseDraft(b.draftSelection) })),
 }));
 
 // ---- team-level roster/bio composition (for team vs. team correlation explorer) ----
@@ -234,6 +234,7 @@ const pcaPlayers = battingRows.map((r,i) => {
     name: r.name, team: r.team, pos: r.pos,
     pc1: +pcaProj[i][0].toFixed(4), pc2: +pcaProj[i][1].toFixed(4),
     draftRound: bio.round ?? null, draftPick: bio.pickOverall ?? null,
+    status: bio.status ?? null, url: r.url ?? null,
   };
 });
 
@@ -246,22 +247,27 @@ const clusterLoadings = {
   },
 };
 
-// ---- merged per-player dataset for the explorer (batting + pitching + age) ----
+// ---- merged per-player dataset for the explorer (batting + pitching + bio) ----
+// Union of everyone with a stat line AND everyone in the draft class, so bio-only
+// axes (draft pick, position, hometown, ...) plot the full pool rather than being
+// silently capped to the ~60 players who've also recorded a stat line.
+const batByName = new Map(battingRows.map(r => [r.name, r]));
 const pitchByName = new Map(pitchingRows.map(r => [r.name, r]));
-const allNames = new Set([...battingRows.map(r=>r.name), ...pitchingRows.map(r=>r.name)]);
+const allNames = new Set([...battingRows.map(r=>r.name), ...pitchingRows.map(r=>r.name), ...allBios.map(b=>b.name)]);
 const explorerPlayers = [...allNames].map(name => {
-  const bat = battingRows.find(r => r.name === name) || {};
+  const bat = batByName.get(name) || {};
   const pit = pitchByName.get(name) || {};
   const bio = bioMap.get(name) || {};
-  const team = bat.team || pit.team;
-  const age = bat.age ?? pit.age ?? null;
+  const team = bat.team || pit.team || bio.team;
+  const age = bat.age ?? pit.age ?? bio.age ?? null;
   return {
-    name, team, pos: bat.pos || pit.pos, age,
+    name, team, pos: bat.pos || pit.pos || bio.pos || null, age,
     bats: bio.bats ?? null, throws: bio.throws ?? null,
     country: bio.hometown ? countryOf(bio.hometown) : null,
     homeState: bio.hometown ? stateOf(bio.hometown) : null,
     draftRound: bio.round ?? null, draftPick: bio.pickOverall ?? null,
     distanceFromSpringfieldMi: distanceFromSpringfield(bio.hometown),
+    status: bio.status ?? null, url: bat.url || pit.url || bio.url || null,
     G: bat.G ?? null, PA: bat.PA ?? null, AB: bat.AB ?? null, R: bat.R ?? null, H: bat.H ?? null,
     HR: bat.HR ?? null, RBI: bat.RBI ?? null, BB: bat.BB ?? null, SO: bat.SO ?? null, SB: bat.SB ?? null,
     AVG: bat.AVG ?? null, OBP: bat.OBP ?? null, SLG: bat.SLG ?? null, OPS: bat.OPS ?? null,
