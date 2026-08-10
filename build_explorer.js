@@ -12,7 +12,7 @@ const PLAYER_STAT_DEFS = [
   { key: 'country', label: 'Home Country', group: 'Bio', type: 'categorical' },
   { key: 'homeState', label: 'Home State/Province', group: 'Bio', type: 'categorical' },
   { key: 'draftRound', label: 'Draft Round', group: 'Bio', fmt: 0 },
-  { key: 'draftPick', label: 'Draft Pick (within round)', group: 'Bio', fmt: 0 },
+  { key: 'draftPick', label: 'Draft Pick (Overall)', group: 'Bio', fmt: 0 },
   { key: 'distanceFromSpringfieldMi', label: 'Distance from Springfield, IL (mi)', group: 'Bio', fmt: 0 },
   { key: 'G', label: 'Games', group: 'Batting', fmt: 0 },
   { key: 'PA', label: 'Plate Appearances', group: 'Batting', fmt: 0 },
@@ -126,7 +126,7 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
       <p>Pick any two stats to plot every player and see the correlation between them, computed live in your browser.</p>
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(resultData.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
-    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games. Most players have single-digit plate appearances or innings pitched, so correlations here reflect one weekend, not a real trend.</div>
+    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games. Most players have single-digit plate appearances or innings pitched, so correlations here reflect one weekend, not a real trend. Every player with a stat line is included regardless of the site's "Signed" status, since that flag has lagged actual game participation for at least one player.</div>
 
     <div class="controls">
       <div class="control-group">

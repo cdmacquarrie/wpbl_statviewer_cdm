@@ -15,10 +15,17 @@ function slugTeam(name) {
 }
 
 // ---- bios: attach age/bats/throws, normalize team to short code ----
+// Each round has a fixed 20 picks (verified against every round seen in the
+// scraped data — rounds 1-3 all cap at pick 20), so pickOverall recovers the
+// true overall draft position from the "Round N * Pick M" text, since pick
+// numbers reset to 1 at the start of every round on the site itself.
+const ROUND_SIZE = 20;
 function parseDraft(sel) {
-  if (!sel) return { round: null, pick: null };
+  if (!sel) return { round: null, pick: null, pickOverall: null };
   const m = sel.match(/Round\s*(\d+).*Pick\s*(\d+)/i);
-  return m ? { round: +m[1], pick: +m[2] } : { round: null, pick: null };
+  if (!m) return { round: null, pick: null, pickOverall: null };
+  const round = +m[1], pick = +m[2];
+  return { round, pick, pickOverall: (round - 1) * ROUND_SIZE + pick };
 }
 const bioMap = new Map(raw.bios.map(b => [b.name, {
   age: b.age, bats: b.bats, throws: b.throws, hometown: b.hometown,
@@ -109,8 +116,8 @@ rank = 0; let prevSo = null;
 soLeaders.forEach((r, i) => { if (r.SO !== prevSo) { rank = i + 1; prevSo = r.SO; } r.rank = rank; });
 
 // ---- bios demographics ----
-const signedBios = raw.bios.map(b => ({ ...b, teamCode: slugTeam(b.team) }));
-const ages = signedBios.map(b => b.age).filter(a => a != null);
+const allBios = raw.bios.map(b => ({ ...b, teamCode: slugTeam(b.team) }));
+const ages = allBios.map(b => b.age).filter(a => a != null);
 const avgAge = ages.reduce((a,b)=>a+b,0) / ages.length;
 const sortedAges = [...ages].sort((a,b)=>a-b);
 const medianAge = sortedAges.length % 2 ? sortedAges[(sortedAges.length-1)/2] : (sortedAges[sortedAges.length/2-1]+sortedAges[sortedAges.length/2])/2;
@@ -132,18 +139,18 @@ function stateOf(hometown) {
   return parts.length >= 3 ? parts[parts.length - 2] : null;
 }
 const countryCounts = {};
-signedBios.forEach(b => { const c = countryOf(b.hometown); countryCounts[c] = (countryCounts[c]||0) + 1; });
+allBios.forEach(b => { const c = countryOf(b.hometown); countryCounts[c] = (countryCounts[c]||0) + 1; });
 const nationality = Object.entries(countryCounts).sort((a,b) => b[1]-a[1]).map(([country,count]) => ({country, count}));
 
 const avgAgeByTeam = teamCodes.map(code => {
-  const list = signedBios.filter(b => b.teamCode === code && b.age != null);
+  const list = allBios.filter(b => b.teamCode === code && b.age != null);
   const avg = list.reduce((a,b)=>a+b.age,0) / list.length;
   return { team: code, avgAge: avg };
 });
 
 function batsThrowsSplit(field) {
   const counts = {};
-  signedBios.forEach(b => { const v = b[field] || 'Unknown'; counts[v] = (counts[v]||0)+1; });
+  allBios.forEach(b => { const v = b[field] || 'Unknown'; counts[v] = (counts[v]||0)+1; });
   return counts;
 }
 const batsSplit = batsThrowsSplit('bats');
@@ -151,14 +158,14 @@ const throwsSplit = batsThrowsSplit('throws');
 
 const rosterByTeam = teamCodes.map(code => ({
   team: code,
-  players: signedBios.filter(b => b.teamCode === code)
+  players: allBios.filter(b => b.teamCode === code)
     .sort((a,b) => (b.age||0) - (a.age||0))
-    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws, ...parseDraft(b.draftSelection) })),
+    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws, status: b.status, ...parseDraft(b.draftSelection) })),
 }));
 
 // ---- team-level roster/bio composition (for team vs. team correlation explorer) ----
 const teamStats = teams.map(t => {
-  const list = signedBios.filter(b => b.teamCode === t.code);
+  const list = allBios.filter(b => b.teamCode === t.code);
   const withHometown = list.filter(b => b.hometown);
   const usaCount = withHometown.filter(b => countryOf(b.hometown) === 'USA').length;
   const pctUSA = withHometown.length ? usaCount / withHometown.length * 100 : null;
@@ -226,7 +233,7 @@ const pcaPlayers = battingRows.map((r,i) => {
   return {
     name: r.name, team: r.team, pos: r.pos,
     pc1: +pcaProj[i][0].toFixed(4), pc2: +pcaProj[i][1].toFixed(4),
-    draftRound: bio.round ?? null, draftPick: bio.pick ?? null,
+    draftRound: bio.round ?? null, draftPick: bio.pickOverall ?? null,
   };
 });
 
@@ -253,7 +260,7 @@ const explorerPlayers = [...allNames].map(name => {
     bats: bio.bats ?? null, throws: bio.throws ?? null,
     country: bio.hometown ? countryOf(bio.hometown) : null,
     homeState: bio.hometown ? stateOf(bio.hometown) : null,
-    draftRound: bio.round ?? null, draftPick: bio.pick ?? null,
+    draftRound: bio.round ?? null, draftPick: bio.pickOverall ?? null,
     distanceFromSpringfieldMi: distanceFromSpringfield(bio.hometown),
     G: bat.G ?? null, PA: bat.PA ?? null, AB: bat.AB ?? null, R: bat.R ?? null, H: bat.H ?? null,
     HR: bat.HR ?? null, RBI: bat.RBI ?? null, BB: bat.BB ?? null, SO: bat.SO ?? null, SB: bat.SB ?? null,
@@ -269,7 +276,9 @@ const result = {
   qualBatters, sbLeaders, qualPitchers, soLeaders,
   bio: {
     avgAge, medianAge, minAge: Math.min(...ages), maxAge: Math.max(...ages), countryCount: nationality.length,
-    ageDist, nationality, avgAgeByTeam, batsSplit, throwsSplit, rosterByTeam, total: signedBios.length,
+    ageDist, nationality, avgAgeByTeam, batsSplit, throwsSplit, rosterByTeam, total: allBios.length,
+    signedCount: allBios.filter(b => b.status === 'Signed').length,
+    draftedCount: allBios.filter(b => b.status === 'Drafted').length,
   },
   correlations, pca_explained: pcaExplained, pcaPlayers,
   sbCorrelationPoints: ageSbBatters,
@@ -278,4 +287,4 @@ const result = {
 };
 
 fs.writeFileSync('./output/result.json', JSON.stringify(result, null, 2));
-console.log('Wrote result.json —', teams.length, 'teams,', qualBatters.length, 'qual batters,', qualPitchers.length, 'qual pitchers,', signedBios.length, 'signed bios.');
+console.log('Wrote result.json —', teams.length, 'teams,', qualBatters.length, 'qual batters,', qualPitchers.length, 'qual pitchers,', allBios.length, 'total drafted players.');

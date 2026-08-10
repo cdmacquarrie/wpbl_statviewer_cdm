@@ -86,7 +86,7 @@ function scatterSVG({ points, xKey, yKey, xLabel, yLabel, width=520, height=360,
   points.forEach(p => {
     const cx = sx(p[xKey]), cy = sy(p[yKey]);
     const color = TEAM_COLOR[p.team] || '#888';
-    const draft = p.draftRound != null ? ` — Round ${p.draftRound}, Pick ${p.draftPick}` : '';
+    const draft = p.draftRound != null ? ` — Round ${p.draftRound}, Pick ${p.draftPick} overall` : '';
     const tip = escapeAttr(`${p.name} (${TEAM_NAME[p.team]}) — ${xLabel}: ${xFmt(p[xKey])}, ${yLabel}: ${yFmt(p[yKey])}${draft}`);
     svg += `<circle class="pt-ana" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="5.5" fill="${color}" fill-opacity="0.85" stroke="var(--surface-1)" stroke-width="1.5" data-tip="${tip}"/>`;
   });
@@ -164,7 +164,7 @@ svg circle.pt-ana { cursor: pointer; }
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
 
-    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games, and the PCA below clusters on essentially one game's worth of rate stats per player. Treat every pattern as descriptive of these four opening games, not a predictive signal.</div>
+    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games, and the PCA below clusters on essentially one game's worth of rate stats per player. Treat every pattern as descriptive of these four opening games, not a predictive signal. Note: this includes anyone who's recorded a plate appearance, regardless of the site's "Signed" status — that flag has lagged actual game participation for at least one player.</div>
 
     <div class="legend-row">
       <span><i style="background:var(--la)"></i>Los Angeles</span>

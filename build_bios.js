@@ -32,16 +32,19 @@ const batsSeg = segBar(d.bio.batsSplit, { R: 'Right', L: 'Left', S: 'Switch' });
 const throwsSeg = segBar(d.bio.throwsSplit, { R: 'Right', L: 'Left' });
 
 function fmtDraft(p) {
-  return p.round != null ? `R${p.round} · P${p.pick}` : '—';
+  return p.round != null ? `R${p.round} · #${p.pickOverall}` : '—';
 }
-const rosterHtml = d.bio.rosterByTeam.map(team => `
+const rosterHtml = d.bio.rosterByTeam.map(team => {
+  const signedCount = team.players.filter(p => p.status === 'Signed').length;
+  return `
         <div class="roster-panel">
-          <h3><i class="dot" style="background:${cssVar(team.team)}"></i>${TEAM_NAME[team.team]}</h3>
+          <h3><i class="dot" style="background:${cssVar(team.team)}"></i>${TEAM_NAME[team.team]} <span class="roster-count" data-total="${team.players.length}" data-signed="${signedCount}">(${team.players.length})</span></h3>
           <table class="roster-table">
-            <thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th><th>Draft</th></tr></thead>
-            <tbody>${team.players.map(p => `<tr><td>${p.name}</td><td class="age">${p.age ?? '—'}</td><td>${p.pos}</td><td>${p.hometown}</td><td class="bt">${p.bats}/${p.throws}</td><td class="bt">${fmtDraft(p)}</td></tr>`).join('')}</tbody>
+            <thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th><th>Draft</th><th>Status</th></tr></thead>
+            <tbody>${team.players.map(p => `<tr class="${p.status==='Signed'?'':'unsigned'}"><td>${p.name}</td><td class="age">${p.age ?? '—'}</td><td>${p.pos}</td><td>${p.hometown}</td><td class="bt">${p.bats}/${p.throws}</td><td class="bt">${fmtDraft(p)}</td><td class="status">${p.status}</td></tr>`).join('')}</tbody>
           </table>
-        </div>`).join('');
+        </div>`;
+}).join('');
 
 const html = `<title>WPBL 2026 Player Bios</title>
 <style>
@@ -99,10 +102,15 @@ header.page-head .cite { color: var(--text-muted); font-size: 12px; margin-top: 
 .roster-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .roster-panel h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 0 0 10px; }
 .roster-panel h3 i.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.roster-panel h3 .roster-count { font-weight: 400; color: var(--text-muted); font-size: 12.5px; }
+.toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); margin: -8px 0 14px; cursor: pointer; }
 table.roster-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 22px; }
 table.roster-table th { text-align: left; font-weight: 600; color: var(--text-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.02em; padding: 5px 6px; border-bottom: 1px solid var(--baseline); }
 table.roster-table td { padding: 6px 6px; border-bottom: 1px solid var(--grid); color: var(--text-primary); }
 table.roster-table td.age, table.roster-table td.bt { font-variant-numeric: tabular-nums; white-space: nowrap; }
+table.roster-table td.status { font-size: 11px; color: var(--text-muted); }
+table.roster-table tr.unsigned td { color: var(--text-muted); }
+table.roster-table tr.unsigned td.status { font-style: italic; }
 table.roster-table tbody tr:last-child td { border-bottom: none; }
 @media (max-width: 760px) { .stat-row { grid-template-columns: repeat(2, 1fr); } .team-age-grid { grid-template-columns: repeat(2, 1fr); } .two-col, .roster-grid { grid-template-columns: 1fr; } }
 </style>
@@ -110,8 +118,8 @@ table.roster-table tbody tr:last-child td { border-bottom: none; }
   <div class="wrap">
     <header class="page-head">
       <h1>WPBL 2026 — Player Bios &amp; Demographics</h1>
-      <p>All ${d.bio.total} signed players across Los Angeles, New York, San Francisco &amp; Boston</p>
-      <p class="cite">Source: womensprobaseballleague.com/prospect-ranking (Drafted Players list, filtered to Signed status) — through ${dateStr} · auto-updated daily. Site does not publish height/weight.</p>
+      <p>All ${d.bio.total} drafted players across Los Angeles, New York, San Francisco &amp; Boston — ${d.bio.signedCount} signed, ${d.bio.draftedCount} drafted and not yet signed</p>
+      <p class="cite">Source: womensprobaseballleague.com/prospect-ranking (full Drafted Players list, Signed + Drafted status) — through ${dateStr} · auto-updated daily. Site does not publish height/weight.</p>
     </header>
     <div class="stat-row">
       <div class="stat-tile"><div class="n">${d.bio.avgAge.toFixed(1)}</div><div class="l">Average age</div></div>
@@ -121,7 +129,7 @@ table.roster-table tbody tr:last-child td { border-bottom: none; }
     </div>
     <div class="card">
       <h2>Age Distribution</h2>
-      <p class="sub">All ${d.bio.total} signed players, league-wide</p>
+      <p class="sub">All ${d.bio.total} drafted players, league-wide</p>
       <div class="hist">${histHtml}</div>
       <div class="hist-labels">${histLabelsHtml}</div>
     </div>
@@ -143,11 +151,29 @@ table.roster-table tbody tr:last-child td { border-bottom: none; }
     </div>
     <div class="card">
       <h2>Full Roster</h2>
-      <p class="sub">All ${d.bio.total} signed players, sorted by age within team</p>
+      <p class="sub">All ${d.bio.total} drafted players, sorted by age within team — greyed rows are drafted but not yet signed</p>
+      <label class="toggle-row"><input type="checkbox" id="showUnsigned" checked> Include drafted (not yet signed) players</label>
       <div class="roster-grid">${rosterHtml}</div>
     </div>
   </div>
 </div>
+<script>
+(function(){
+  var toggle = document.getElementById('showUnsigned');
+  function apply(){
+    var show = toggle.checked;
+    document.querySelectorAll('table.roster-table tr.unsigned').forEach(function(tr){
+      tr.style.display = show ? '' : 'none';
+    });
+    document.querySelectorAll('.roster-count').forEach(function(el){
+      var n = show ? el.dataset.total : el.dataset.signed;
+      el.textContent = '(' + n + ')';
+    });
+  }
+  toggle.addEventListener('change', apply);
+  apply();
+})();
+</script>
 `;
 
 fs.writeFileSync('./output/wpbl_bios.html', html);

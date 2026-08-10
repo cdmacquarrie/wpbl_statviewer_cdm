@@ -55,6 +55,8 @@ async function scrapeStats() {
 async function scrapeBios() {
   const html = await fetch(`${BASE}/prospect-ranking/`).then(r => r.text());
   const $ = cheerio.load(html);
+  // Full draft class: "Signed" (on an active roster) and "Drafted" (picked, not yet
+  // signed) — both are real players on a team's page, so both are kept here.
   const rows = $('table tbody tr').map((i, tr) => {
     const tds = $(tr).find('td').map((j, td) => $(td).text().trim()).get();
     return {
@@ -63,7 +65,7 @@ async function scrapeBios() {
       url: $(tr).attr('data-url'),
     };
   }).get();
-  return rows.filter(r => r.status === 'Signed');
+  return rows.filter(r => r.name && r.team);
 }
 
 (async () => {
