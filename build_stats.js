@@ -174,7 +174,7 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
     <div class="card"><div class="standings-grid">${standingsHtml}
       </div>
     </div>
-    <label class="toggle-row"><input type="checkbox" id="unsignedToggle" checked> Include drafted (not yet signed) players</label>
+    <label class="toggle-row"><input type="checkbox" id="statsUnsignedToggle" checked> Include drafted (not yet signed) players</label>
     <div class="section-title">Batting Leaderboards</div>
     <div class="leader-grid" id="battingLeaderGrid"></div>
     <div class="section-title">Pitching Leaderboards</div>
@@ -190,6 +190,7 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
   </div>
 </div>
 <script>
+(function(){
 const DATA = ${datasetsJson};
 const BATTING_CARDS = ${battingCardsJson};
 const PITCHING_CARDS = ${pitchingCardsJson};
@@ -201,7 +202,7 @@ const FMT = {
   raw: v => v,
 };
 
-const toggle = document.getElementById('unsignedToggle');
+const toggle = document.getElementById('statsUnsignedToggle');
 
 function nameLink(name, url) {
   return url ? '<a class="player-link" href="' + url + '" target="_blank" rel="noopener">' + name + '</a>' : name;
@@ -247,6 +248,7 @@ function render() {
 
 toggle.addEventListener('change', render);
 render();
+})();
 </script>
 `;
 

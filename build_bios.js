@@ -128,6 +128,7 @@ a.player-link:hover { text-decoration: underline; }
   </div>
 </div>
 <script>
+(function(){
 const ALL_PLAYERS = ${playersJson};
 const TEAM_CODES = ${teamCodesJson};
 const TEAM_COLOR = ${teamColorJson};
@@ -222,6 +223,7 @@ function render() {
 
 toggle.addEventListener('change', render);
 render();
+})();
 </script>
 `;
 

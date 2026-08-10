@@ -149,9 +149,9 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
         <input type="checkbox" id="qualToggle">
         <label for="qualToggle">Qualified only (5+ AB for batting stats, 2+ IP for pitching stats)</label>
       </div>
-      <div class="control-group checkbox" id="unsignedGroup">
-        <input type="checkbox" id="unsignedToggle" checked>
-        <label for="unsignedToggle">Include drafted (not yet signed) players</label>
+      <div class="control-group checkbox" id="expUnsignedGroup">
+        <input type="checkbox" id="expUnsignedToggle" checked>
+        <label for="expUnsignedToggle">Include drafted (not yet signed) players</label>
       </div>
     </div>
 
@@ -170,6 +170,7 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
   </div>
 </div>
 <script>
+(function(){
 const PLAYERS = ${dataJson};
 const TEAM_STATS = ${teamStatsJson};
 const PLAYER_STAT_DEFS = ${playerStatDefsJson};
@@ -182,8 +183,8 @@ const xSelect = document.getElementById('xSelect');
 const ySelect = document.getElementById('ySelect');
 const qualToggle = document.getElementById('qualToggle');
 const qualGroup = document.getElementById('qualGroup');
-const unsignedToggle = document.getElementById('unsignedToggle');
-const unsignedGroup = document.getElementById('unsignedGroup');
+const expUnsignedToggle = document.getElementById('expUnsignedToggle');
+const expUnsignedGroup = document.getElementById('expUnsignedGroup');
 const swapBtn = document.getElementById('swapBtn');
 const chartHost = document.getElementById('chartHost');
 const badgesEl = document.getElementById('badges');
@@ -215,7 +216,7 @@ buildOptions(ySelect, 'OPS');
 levelSelect.addEventListener('change', () => {
   const isTeam = levelSelect.value === 'team';
   qualGroup.style.display = isTeam ? 'none' : '';
-  unsignedGroup.style.display = isTeam ? 'none' : '';
+  expUnsignedGroup.style.display = isTeam ? 'none' : '';
   buildOptions(xSelect, isTeam ? 'pctUSA' : 'age');
   buildOptions(ySelect, isTeam ? 'pct' : 'OPS');
   render();
@@ -315,7 +316,7 @@ function render() {
   const xKey = xSelect.value, yKey = ySelect.value;
   const xDef = map[xKey], yDef = map[yKey];
   const qualOnly = !isTeam && qualToggle.checked;
-  const includeUnsigned = isTeam || unsignedToggle.checked;
+  const includeUnsigned = isTeam || expUnsignedToggle.checked;
 
   let pts = currentDataset().filter(p => p[xKey] != null && p[yKey] != null && p.team);
   if (!includeUnsigned) pts = pts.filter(p => p.status === 'Signed');
@@ -474,7 +475,7 @@ function renderBarChart(pts, catKey, numKey, catDef, numDef, isTeam) {
 xSelect.addEventListener('change', render);
 ySelect.addEventListener('change', render);
 qualToggle.addEventListener('change', render);
-unsignedToggle.addEventListener('change', render);
+expUnsignedToggle.addEventListener('change', render);
 swapBtn.addEventListener('click', () => {
   const x = xSelect.value, y = ySelect.value;
   buildOptions(xSelect, y);
@@ -483,6 +484,7 @@ swapBtn.addEventListener('click', () => {
 });
 
 render();
+})();
 </script>
 `;
 

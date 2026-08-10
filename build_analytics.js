@@ -178,7 +178,7 @@ svg circle.pt-ana { cursor: pointer; }
       <span><i style="background:var(--bos)"></i>Boston</span>
     </div>
 
-    <label class="toggle-row"><input type="checkbox" id="unsignedToggle" checked> Include drafted (not yet signed) players</label>
+    <label class="toggle-row"><input type="checkbox" id="anaUnsignedToggle" checked> Include drafted (not yet signed) players</label>
 
     <div class="section-title">Dimensionality Reduction — Batter Rate-Stat Profiles</div>
     <p style="color:var(--text-secondary); font-size:12.5px; margin:-6px 0 14px;">Each of <span id="playerCount">${data.players.length}</span> batters is represented as a 10-dimensional vector (AVG, OBP, SLG, and R/H/HR/RBI/BB/SO/SB per plate appearance), standardized, then projected to 2D via PCA — a linear method whose axis loadings are directly interpretable, unlike nonlinear embeddings (t-SNE, UMAP), which we skip here since a handful of games per player isn't enough signal for them to say anything beyond "got a hit or didn't."</p>
@@ -207,7 +207,7 @@ svg circle.pt-ana { cursor: pointer; }
 (function(){
   var PCA_PLAYERS = ${pcaPlayersJson};
   var tip = document.getElementById('anaTooltip');
-  var toggle = document.getElementById('unsignedToggle');
+  var toggle = document.getElementById('anaUnsignedToggle');
   var countEl = document.getElementById('playerCount');
   var leadersEl = document.getElementById('pc1Leaders');
   var circles = document.querySelectorAll('circle.pt-ana');
