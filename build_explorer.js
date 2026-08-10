@@ -117,6 +117,8 @@ svg text.bar-label { font-size: 11.5px; fill: var(--text-primary); font-family: 
 svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: ui-monospace, monospace; }
 .tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 10; }
 .empty-msg { text-align: center; color: var(--text-muted); font-size: 13px; padding: 60px 0; }
+.disclaimer-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.disclaimer-footer a { color: var(--text-secondary); }
 </style>
 <div class="viz-root">
   <div class="wrap">
@@ -167,6 +169,7 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
       <div id="chartHost"></div>
       <div class="tooltip" id="tooltip"></div>
     </div>
+    <footer class="disclaimer-footer">Unofficial fan project — not affiliated with, endorsed by, or sponsored by the Women's Pro Baseball League. Stats and player data sourced from <a href="https://www.womensprobaseballleague.com" target="_blank" rel="noopener">womensprobaseballleague.com</a>. Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</footer>
   </div>
 </div>
 <script>

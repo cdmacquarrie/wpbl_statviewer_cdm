@@ -87,6 +87,8 @@ table.roster-table tr.unsigned td.status { font-style: italic; }
 table.roster-table tbody tr:last-child td { border-bottom: none; }
 a.player-link { color: inherit; text-decoration: none; }
 a.player-link:hover { text-decoration: underline; }
+.disclaimer-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.disclaimer-footer a { color: var(--text-secondary); }
 @media (max-width: 760px) { .stat-row { grid-template-columns: repeat(2, 1fr); } .team-age-grid { grid-template-columns: repeat(2, 1fr); } .two-col, .roster-grid { grid-template-columns: 1fr; } }
 </style>
 <div class="viz-root">
@@ -125,6 +127,7 @@ a.player-link:hover { text-decoration: underline; }
       <p class="sub" id="rosterSub"></p>
       <div class="roster-grid" id="rosterGrid"></div>
     </div>
+    <footer class="disclaimer-footer">Unofficial fan project — not affiliated with, endorsed by, or sponsored by the Women's Pro Baseball League. Stats and player data sourced from <a href="https://www.womensprobaseballleague.com" target="_blank" rel="noopener">womensprobaseballleague.com</a>. Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</footer>
   </div>
 </div>
 <script>

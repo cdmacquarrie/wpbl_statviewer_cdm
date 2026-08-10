@@ -108,7 +108,7 @@ const pcaSVG = scatterSVG({
   xFmt: v=>v.toFixed(1), yFmt: v=>v.toFixed(1),
 });
 
-const html = `<title>WPBL 2026 Analytics</title>
+const html = `<title>WPBL 2026 At-Bat Analytics</title>
 <style>
 .viz-root {
   color-scheme: light;
@@ -158,14 +158,16 @@ svg circle.pt-ana { cursor: pointer; }
 .loadings-legend { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 .loadings-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
 .toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin: 4px 0 4px; cursor: pointer; width: fit-content; }
+.disclaimer-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.disclaimer-footer a { color: var(--text-secondary); }
 @media (max-width: 900px) { .grid2 { grid-template-columns: 1fr; } }
 </style>
 <div class="viz-root">
   <div class="wrap">
     <header class="page-head">
       <div class="kicker">2026 Regular Season</div>
-      <h1>WPBL Bio × Performance Analytics</h1>
-      <p>PCA over each batter's rate-stat profile — for age/stat correlations across any two metrics, use the Stat Explorer tab.</p>
+      <h1>WPBL At-Bat Performance Analytics</h1>
+      <p>PCA over each batter's at-bat rate-stat profile (AVG/OBP/SLG and contact outcomes) — pitching, fielding, and base-running are not part of this model. For age/stat correlations across any two metrics, including pitching ones, use the Stat Explorer tab.</p>
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
 
@@ -180,8 +182,8 @@ svg circle.pt-ana { cursor: pointer; }
 
     <label class="toggle-row"><input type="checkbox" id="anaUnsignedToggle" checked> Include drafted (not yet signed) players</label>
 
-    <div class="section-title">Dimensionality Reduction — Batter Rate-Stat Profiles</div>
-    <p style="color:var(--text-secondary); font-size:12.5px; margin:-6px 0 14px;">Each of <span id="playerCount">${data.players.length}</span> batters is represented as a 10-dimensional vector (AVG, OBP, SLG, and R/H/HR/RBI/BB/SO/SB per plate appearance), standardized, then projected to 2D via PCA — a linear method whose axis loadings are directly interpretable, unlike nonlinear embeddings (t-SNE, UMAP), which we skip here since a handful of games per player isn't enough signal for them to say anything beyond "got a hit or didn't."</p>
+    <div class="section-title">Dimensionality Reduction — At-Bat Rate-Stat Profiles (Batting Only)</div>
+    <p style="color:var(--text-secondary); font-size:12.5px; margin:-6px 0 14px;">Each of <span id="playerCount">${data.players.length}</span> batters is represented as a 10-dimensional vector of at-bat outcomes (AVG, OBP, SLG, and R/H/HR/RBI/BB/SO/SB per plate appearance), standardized, then projected to 2D via PCA — a linear method whose axis loadings are directly interpretable, unlike nonlinear embeddings (t-SNE, UMAP), which we skip here since a handful of games per player isn't enough signal for them to say anything beyond "got a hit or didn't." Pitching, fielding, and base-running stats aren't included in this vector.</p>
     <div class="card">
       <h2>PCA</h2>
       <p class="sub">Principal component analysis — linear projection</p>
@@ -200,6 +202,7 @@ svg circle.pt-ana { cursor: pointer; }
       <p class="loadings-legend"><i style="background:var(--load-pos)"></i>positive weight &nbsp; <i style="background:var(--load-neg)"></i>negative weight — each bar is that stat's contribution to the component, in standardized units. Loadings are fit on the full population and don't change with the toggle above.</p>
     </div>
 
+    <footer class="disclaimer-footer">Unofficial fan project — not affiliated with, endorsed by, or sponsored by the Women's Pro Baseball League. Stats and player data sourced from <a href="https://www.womensprobaseballleague.com" target="_blank" rel="noopener">womensprobaseballleague.com</a>. Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</footer>
   </div>
   <div class="ana-tooltip" id="anaTooltip"></div>
 </div>

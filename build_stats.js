@@ -109,6 +109,8 @@ header.page-head .cite { color: var(--text-muted); font-size: 11.5px; margin-top
 .toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; width: fit-content; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 12px; display: flex; align-items: center; gap: 10px; }
 .section-title::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
+.disclaimer-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.6; }
+.disclaimer-footer a { color: var(--text-secondary); }
 .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; padding: 20px 22px; margin-bottom: 18px; }
 .card h2 { font-size: 14px; margin: 0 0 2px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; }
 .card .sub { font-size: 12px; color: var(--text-muted); margin: 0 0 16px; }
@@ -187,6 +189,7 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
       </table>
     </div>
     <div class="leader-grid" id="pitchingLeaderGrid"></div>
+    <footer class="disclaimer-footer">Unofficial fan project — not affiliated with, endorsed by, or sponsored by the Women's Pro Baseball League. Stats and player data sourced from <a href="https://www.womensprobaseballleague.com" target="_blank" rel="noopener">womensprobaseballleague.com</a>. Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</footer>
   </div>
 </div>
 <script>
