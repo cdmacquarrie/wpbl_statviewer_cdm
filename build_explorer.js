@@ -13,6 +13,7 @@ const PLAYER_STAT_DEFS = [
   { key: 'homeState', label: 'Home State/Province', group: 'Bio', type: 'categorical' },
   { key: 'draftRound', label: 'Draft Round', group: 'Bio', fmt: 0 },
   { key: 'draftPick', label: 'Draft Pick (within round)', group: 'Bio', fmt: 0 },
+  { key: 'distanceFromSpringfieldMi', label: 'Distance from Springfield, IL (mi)', group: 'Bio', fmt: 0 },
   { key: 'G', label: 'Games', group: 'Batting', fmt: 0 },
   { key: 'PA', label: 'Plate Appearances', group: 'Batting', fmt: 0 },
   { key: 'AB', label: 'At-Bats', group: 'Batting', fmt: 0 },

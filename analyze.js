@@ -2,6 +2,11 @@ const fs = require('fs');
 const { PCA } = require('ml-pca');
 
 const raw = JSON.parse(fs.readFileSync('./output/raw_data.json', 'utf8'));
+const geocache = fs.existsSync('./hometown_geocache.json')
+  ? JSON.parse(fs.readFileSync('./hometown_geocache.json', 'utf8')) : {};
+function distanceFromSpringfield(hometown) {
+  return hometown && geocache[hometown] ? geocache[hometown].distanceFromSpringfieldMi : null;
+}
 const TEAM_ABBR = { boston: 'BOS', 'los-angeles': 'LA', 'new-york': 'NY', 'san-francisco': 'SF' };
 const TEAM_FULL = { BOS: 'Boston', LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco' };
 function slugTeam(name) {
@@ -148,7 +153,7 @@ const rosterByTeam = teamCodes.map(code => ({
   team: code,
   players: signedBios.filter(b => b.teamCode === code)
     .sort((a,b) => (b.age||0) - (a.age||0))
-    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws })),
+    .map(b => ({ name: b.name, age: b.age, pos: b.pos, hometown: b.hometown, bats: b.bats, throws: b.throws, ...parseDraft(b.draftSelection) })),
 }));
 
 // ---- team-level roster/bio composition (for team vs. team correlation explorer) ----
@@ -249,6 +254,7 @@ const explorerPlayers = [...allNames].map(name => {
     country: bio.hometown ? countryOf(bio.hometown) : null,
     homeState: bio.hometown ? stateOf(bio.hometown) : null,
     draftRound: bio.round ?? null, draftPick: bio.pick ?? null,
+    distanceFromSpringfieldMi: distanceFromSpringfield(bio.hometown),
     G: bat.G ?? null, PA: bat.PA ?? null, AB: bat.AB ?? null, R: bat.R ?? null, H: bat.H ?? null,
     HR: bat.HR ?? null, RBI: bat.RBI ?? null, BB: bat.BB ?? null, SO: bat.SO ?? null, SB: bat.SB ?? null,
     AVG: bat.AVG ?? null, OBP: bat.OBP ?? null, SLG: bat.SLG ?? null, OPS: bat.OPS ?? null,

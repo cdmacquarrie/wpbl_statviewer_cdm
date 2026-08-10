@@ -31,12 +31,15 @@ function segBar(splits, labelMap) {
 const batsSeg = segBar(d.bio.batsSplit, { R: 'Right', L: 'Left', S: 'Switch' });
 const throwsSeg = segBar(d.bio.throwsSplit, { R: 'Right', L: 'Left' });
 
+function fmtDraft(p) {
+  return p.round != null ? `R${p.round} · P${p.pick}` : '—';
+}
 const rosterHtml = d.bio.rosterByTeam.map(team => `
         <div class="roster-panel">
           <h3><i class="dot" style="background:${cssVar(team.team)}"></i>${TEAM_NAME[team.team]}</h3>
           <table class="roster-table">
-            <thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th></tr></thead>
-            <tbody>${team.players.map(p => `<tr><td>${p.name}</td><td class="age">${p.age ?? '—'}</td><td>${p.pos}</td><td>${p.hometown}</td><td class="bt">${p.bats}/${p.throws}</td></tr>`).join('')}</tbody>
+            <thead><tr><th>Player</th><th>Age</th><th>Pos</th><th>Hometown</th><th>B/T</th><th>Draft</th></tr></thead>
+            <tbody>${team.players.map(p => `<tr><td>${p.name}</td><td class="age">${p.age ?? '—'}</td><td>${p.pos}</td><td>${p.hometown}</td><td class="bt">${p.bats}/${p.throws}</td><td class="bt">${fmtDraft(p)}</td></tr>`).join('')}</tbody>
           </table>
         </div>`).join('');
 

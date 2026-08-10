@@ -1,0 +1,277 @@
+{
+  "San Diego, California, USA": {
+    "lat": 32.7174202,
+    "lon": -117.162772,
+    "distanceFromSpringfieldMi": 1601.4
+  },
+  "Tokorozawa, Japan": {
+    "lat": 35.7987179,
+    "lon": 139.4696758,
+    "distanceFromSpringfieldMi": 6351.7
+  },
+  "Pinehurst, North Carolina, USA": {
+    "lat": 35.1951981,
+    "lon": -79.4692796,
+    "distanceFromSpringfieldMi": 641.3
+  },
+  "Seoul, South Korea": {
+    "lat": 37.5666791,
+    "lon": 126.9782914,
+    "distanceFromSpringfieldMi": 6610
+  },
+  "Fruitvale, British Columbia, Canada": {
+    "lat": 49.114921,
+    "lon": -117.544602,
+    "distanceFromSpringfieldMi": 1508
+  },
+  "Las Vegas, Nevada, USA": {
+    "lat": 36.1674263,
+    "lon": -115.1484131,
+    "distanceFromSpringfieldMi": 1406.1
+  },
+  "Marietta, Georgia, USA": {
+    "lat": 33.9528472,
+    "lon": -84.5496148,
+    "distanceFromSpringfieldMi": 491.4
+  },
+  "New Orleans, Louisiana, USA": {
+    "lat": 29.9561422,
+    "lon": -90.0733934,
+    "distanceFromSpringfieldMi": 679.3
+  },
+  "Jacksonville, Florida, USA": {
+    "lat": 30.3262247,
+    "lon": -81.6579179,
+    "distanceFromSpringfieldMi": 793.7
+  },
+  "Philadelphia, Pennsylvania, USA": {
+    "lat": 39.9527237,
+    "lon": -75.1635262,
+    "distanceFromSpringfieldMi": 767.5
+  },
+  "Abbotsford, British Columbia, Canada": {
+    "lat": 49.0521162,
+    "lon": -122.329479,
+    "distanceFromSpringfieldMi": 1718.8
+  },
+  "Corpus Christi, Texas, USA": {
+    "lat": 27.7635302,
+    "lon": -97.4033191,
+    "distanceFromSpringfieldMi": 941.3
+  },
+  "St. John's, Newfoundland, Canada": {
+    "lat": 47.5646794,
+    "lon": -52.7066964,
+    "distanceFromSpringfieldMi": 1902.9
+  },
+  "Sterling, Virginia, USA": {
+    "lat": 39.003685,
+    "lon": -77.4083096,
+    "distanceFromSpringfieldMi": 655.4
+  },
+  "Anaheim, California, USA": {
+    "lat": 33.8347516,
+    "lon": -117.911732,
+    "distanceFromSpringfieldMi": 1609.1
+  },
+  "Curacao": {
+    "lat": 12.1176488,
+    "lon": -68.9309263,
+    "distanceFromSpringfieldMi": 2291.6
+  },
+  "Gahanna, Ohio, USA": {
+    "lat": 40.0195625,
+    "lon": -82.8791363,
+    "distanceFromSpringfieldMi": 359.2
+  },
+  "Holly Springs, North Carolina, USA": {
+    "lat": 35.6512655,
+    "lon": -78.8336218,
+    "distanceFromSpringfieldMi": 655.9
+  },
+  "Ladera Ranch, California, USA": {
+    "lat": 33.551225,
+    "lon": -117.6442582,
+    "distanceFromSpringfieldMi": 1602.8
+  },
+  "Laguna Beach, California, USA": {
+    "lat": 33.5426975,
+    "lon": -117.785366,
+    "distanceFromSpringfieldMi": 1610.4
+  },
+  "Fukuyama, Japan": {
+    "lat": 34.4857039,
+    "lon": 133.3623097,
+    "distanceFromSpringfieldMi": 6618.5
+  },
+  "Englewood, New Jersey, USA": {
+    "lat": 40.8929329,
+    "lon": -73.9726508,
+    "distanceFromSpringfieldMi": 828.1
+  },
+  "Kagawa, Japan": {
+    "lat": 34.2480104,
+    "lon": 134.0586579,
+    "distanceFromSpringfieldMi": 6611.4
+  },
+  "Saitama, Japan": {
+    "lat": 35.9754168,
+    "lon": 139.4160114,
+    "distanceFromSpringfieldMi": 6343.5
+  },
+  "Albany, Georgia, USA": {
+    "lat": 31.5782062,
+    "lon": -84.1556809,
+    "distanceFromSpringfieldMi": 644.9
+  },
+  "Waterfall, Australia": {
+    "lat": -34.1347694,
+    "lon": 150.9931332,
+    "distanceFromSpringfieldMi": 9129.8
+  },
+  "Murrieta, California, USA": {
+    "lat": 33.560832,
+    "lon": -117.210656,
+    "distanceFromSpringfieldMi": 1579.6
+  },
+  "Nayarit, Mexico": {
+    "lat": 22.0000001,
+    "lon": -105.0000001,
+    "distanceFromSpringfieldMi": 1524
+  },
+  "Mont-Saint-Hilaire, Quebec, Canada": {
+    "lat": 45.5623512,
+    "lon": -73.1918864,
+    "distanceFromSpringfieldMi": 924.3
+  },
+  "Hadong, South Korea": {
+    "lat": 35.0679208,
+    "lon": 127.7552641,
+    "distanceFromSpringfieldMi": 6742.6
+  },
+  "Bedford, New Hampshire, USA": {
+    "lat": 42.9464737,
+    "lon": -71.5159015,
+    "distanceFromSpringfieldMi": 963.4
+  },
+  "Edmonton, Alberta, Canada": {
+    "lat": 53.5462055,
+    "lon": -113.491241,
+    "distanceFromSpringfieldMi": 1464.9
+  },
+  "Setouchi City, Japan": {
+    "lat": 34.3473355,
+    "lon": 134.0326614,
+    "distanceFromSpringfieldMi": 6606.4
+  },
+  "Quebec City, Quebec, Canada": {
+    "lat": 46.8137431,
+    "lon": -71.2084061,
+    "distanceFromSpringfieldMi": 1043.4
+  },
+  "Vancouver, British Columbia, Canada": {
+    "lat": 49.2608724,
+    "lon": -123.113952,
+    "distanceFromSpringfieldMi": 1756.2
+  },
+  "Burnaby, British Columbia, Canada": {
+    "lat": 49.2433804,
+    "lon": -122.972545,
+    "distanceFromSpringfieldMi": 1749.7
+  },
+  "Lyndhurst, New Jersey, USA": {
+    "lat": 40.8122927,
+    "lon": -74.1247255,
+    "distanceFromSpringfieldMi": 820.2
+  },
+  "Gatineau, Quebec, Canada": {
+    "lat": 45.4277659,
+    "lon": -75.710976,
+    "distanceFromSpringfieldMi": 807.5
+  },
+  "Berrysburg, Pennsylvania, USA": {
+    "lat": 40.6020295,
+    "lon": -76.8119149,
+    "distanceFromSpringfieldMi": 679.4
+  },
+  "Hermosillo, Mexico": {
+    "lat": 29.0948207,
+    "lon": -110.9692202,
+    "distanceFromSpringfieldMi": 1416.1
+  },
+  "Woburn, Massachusetts, USA": {
+    "lat": 42.4792618,
+    "lon": -71.1522766,
+    "distanceFromSpringfieldMi": 978.5
+  },
+  "Perth, Australia": {
+    "lat": -31.9558967,
+    "lon": 115.8605784,
+    "distanceFromSpringfieldMi": 10916.2
+  },
+  "Puebla, Mexico": {
+    "lat": 18.833333,
+    "lon": -98,
+    "distanceFromSpringfieldMi": 1530.5
+  },
+  "Port Moody, British Columbia, Canada": {
+    "lat": 49.2821981,
+    "lon": -122.8293554,
+    "distanceFromSpringfieldMi": 1743.7
+  },
+  "Bay Shore, New York, USA": {
+    "lat": 40.7276525,
+    "lon": -73.2435218,
+    "distanceFromSpringfieldMi": 866.3
+  },
+  "Tepatitlan, Mexico": {
+    "lat": 20.8151477,
+    "lon": -102.758809,
+    "distanceFromSpringfieldMi": 1522.1
+  },
+  "Pullenvale, Australia": {
+    "lat": -27.518738,
+    "lon": 152.892903,
+    "distanceFromSpringfieldMi": 8815.1
+  },
+  "Amherst, New Hampshire, USA": {
+    "lat": 42.8642874,
+    "lon": -71.6252484,
+    "distanceFromSpringfieldMi": 957.2
+  },
+  "Maroubra, Australia": {
+    "lat": -33.9453441,
+    "lon": 151.2456824,
+    "distanceFromSpringfieldMi": 9111.1
+  },
+  "Greensboro, North Carolina, USA": {
+    "lat": 36.0726355,
+    "lon": -79.7919754,
+    "distanceFromSpringfieldMi": 594.8
+  },
+  "Glen Burnie, Maryland, USA": {
+    "lat": 39.1595439,
+    "lon": -76.6151514,
+    "distanceFromSpringfieldMi": 696
+  },
+  "Nakagawa City, Japan": {
+    "lat": 34.6637065,
+    "lon": 135.5407469,
+    "distanceFromSpringfieldMi": 6541.6
+  },
+  "Morristown, New Jersey, USA": {
+    "lat": 40.7970382,
+    "lon": -74.4809868,
+    "distanceFromSpringfieldMi": 801.5
+  },
+  "Aldama, Mexico": {
+    "lat": 16.932319,
+    "lon": -92.7003153,
+    "distanceFromSpringfieldMi": 1589.3
+  },
+  "Osaka, Japan": {
+    "lat": 34.6937569,
+    "lon": 135.5014539,
+    "distanceFromSpringfieldMi": 6541.1
+  }
+}
