@@ -201,7 +201,7 @@ const correlations = {
   age_era: { r: pearson(ageEraPitchers.map(x=>x.age), ageEraPitchers.map(x=>x.ERA)), n: ageEraPitchers.length, ...linreg(ageEraPitchers.map(x=>x.age), ageEraPitchers.map(x=>x.ERA)) },
 };
 
-// ---- PCA / tSNE / UMAP on batters ----
+// ---- PCA on batters ----
 const FEATURE_LABELS = ['AVG', 'OBP', 'SLG', 'R/PA', 'H/PA', 'HR/PA', 'RBI/PA', 'BB/PA', 'SO/PA', 'SB/PA'];
 const feat = battingRows.map(r => {
   const pa = r.PA || 0;

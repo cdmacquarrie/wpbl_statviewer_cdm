@@ -7,6 +7,15 @@ const cssVar = t => `var(--${t.toLowerCase()})`;
 
 function fmt3(v) { return v == null ? '—' : v.toFixed(3).replace(/^0\./,'.').replace(/^-0\./,'-.'); }
 function fmtIP(ip) { if (ip==null) return '—'; const whole = Math.floor(ip); const frac = Math.round((ip-whole)*3); return `${whole}.${frac}`; }
+function ordinal(n) {
+  const v = n % 100;
+  if (v >= 11 && v <= 13) return `${n}th`;
+  return `${n}${['th','st','nd','rd'][n % 10] || 'th'}`;
+}
+function placeLabel(t, teams) {
+  const tied = teams.filter(x => x.place === t.place).length > 1;
+  return (tied ? 'T-' : '') + ordinal(t.place);
+}
 
 const scrapedDate = new Date(d.scrapedAt);
 const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
@@ -17,7 +26,7 @@ const teamCardsHtml = d.teams.map(t => `
         <div class="head">
           <div class="city" style="color:${cssVar(t.code)}">${t.name}</div>
           <div class="rec">${t.W}–${t.L}</div>
-          <div class="place">${t.place === 1 ? '1st' : t.place === 2 && d.teams.filter(x=>x.place===2).length>1 ? 'T-2nd' : t.place+'th'} place · ${t.pct.toFixed(3).replace(/^0\./,'.')}</div>
+          <div class="place">${placeLabel(t, d.teams)} place · ${t.pct.toFixed(3).replace(/^0\./,'.')}</div>
         </div>
         <div class="stats">
           <div class="stat-cell"><div class="v">${t.perGame.R.toFixed(1)}</div><div class="k">R/G</div></div>

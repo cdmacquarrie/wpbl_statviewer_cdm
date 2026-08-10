@@ -15,7 +15,7 @@ function escapeAttr(s) {
   return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-// items: [{label, weight}] (PCA) or [{label, r}] (t-SNE/UMAP) — rendered as diverging bars, sorted by |value|.
+// items: [{label, weight}] — PCA loadings rendered as diverging bars, sorted by |value|.
 function loadingsBars(items) {
   const valueOf = it => it.weight !== undefined ? it.weight : it.r;
   const maxAbs = Math.max(...items.map(it => Math.abs(valueOf(it))), 1e-9);
@@ -97,7 +97,7 @@ function scatterSVG({ points, xKey, yKey, xLabel, yLabel, width=520, height=360,
   return svg;
 }
 
-// ---- Build PCA / tSNE / UMAP scatters ----
+// ---- Build PCA scatter ----
 const pcaSVG = scatterSVG({
   points: data.players, xKey: 'pc1', yKey: 'pc2',
   xLabel: `PC1 (${(data.pca_explained[0]*100).toFixed(1)}%)`, yLabel: `PC2 (${(data.pca_explained[1]*100).toFixed(1)}%)`,
@@ -160,11 +160,11 @@ svg circle.pt-ana { cursor: pointer; }
     <header class="page-head">
       <div class="kicker">2026 Regular Season</div>
       <h1>WPBL Bio × Performance Analytics</h1>
-      <p>Dimensionality reduction (PCA, t-SNE, UMAP) over each batter's rate-stat profile — for age/stat correlations across any two metrics, use the Stat Explorer tab.</p>
+      <p>PCA over each batter's rate-stat profile — for age/stat correlations across any two metrics, use the Stat Explorer tab.</p>
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
 
-    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games, and PCA/t-SNE/UMAP below cluster on essentially one game's worth of rate stats per player. Treat every pattern as descriptive of these four opening games, not a predictive signal.</div>
+    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games, and the PCA below clusters on essentially one game's worth of rate stats per player. Treat every pattern as descriptive of these four opening games, not a predictive signal.</div>
 
     <div class="legend-row">
       <span><i style="background:var(--la)"></i>Los Angeles</span>
