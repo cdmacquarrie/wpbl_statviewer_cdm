@@ -33,6 +33,20 @@ embeddings just re-derived "got a hit or not," which isn't worth the "why are yo
 games of at-bats" look. PCA stayed since it's linear, cheap, and its loadings are directly honest
 about what PC1/PC2 mean.
 
+## Live site (GitHub Pages)
+
+`.github/workflows/deploy.yml` runs the full pipeline on a daily cron (~9pm Pacific),
+on every push to `main`, and on manual dispatch, then publishes `output/` (with
+`wpbl_dashboard.html` copied to `index.html`) to GitHub Pages via the native
+`actions/deploy-pages` flow — no PAT or secret needed, just the workflow's own
+`GITHUB_TOKEN`. This is what actually solves same-day auto-updates; it doesn't
+depend on Claude's GitHub App access at all.
+
+One-time setup (repo owner, via the GitHub web UI): **Settings → Pages → Source:
+"GitHub Actions"**. After that the workflow owns deployment — the site goes live at
+`https://cdmacquarrie.github.io/wpbl_stats_cdm/` on the next run (or trigger one now
+from the Actions tab → "Scrape and deploy WPBL dashboard" → Run workflow).
+
 ## Output → published artifacts
 
 After running, publish each generated file to its **existing** artifact URL (do not mint new URLs —
