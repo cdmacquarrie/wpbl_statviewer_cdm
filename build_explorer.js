@@ -110,6 +110,11 @@ svg line.gridline { stroke: var(--grid); stroke-width: 1; }
 svg line.axis-line { stroke: var(--baseline); stroke-width: 1; }
 svg line.trend-line { stroke: var(--text-secondary); stroke-width: 2; stroke-dasharray: 5 4; }
 svg circle.pt { cursor: pointer; }
+svg rect.bar-track { fill: var(--surface-2); }
+svg rect.bar-fill { fill: var(--accent); cursor: pointer; }
+svg line.err-bar, svg line.err-cap { stroke: var(--text-primary); stroke-width: 1.5; }
+svg text.bar-label { font-size: 11.5px; fill: var(--text-primary); font-family: system-ui, sans-serif; font-weight: 600; }
+svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: ui-monospace, monospace; }
 .tooltip { position: absolute; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 10; }
 .empty-msg { text-align: center; color: var(--text-muted); font-size: 13px; padding: 60px 0; }
 </style>
@@ -240,6 +245,30 @@ function domain(vals, padFrac=0.12) {
 function fmtVal(v, digits) { return v == null ? '—' : v.toFixed(digits); }
 function displayVal(p, key, def) { return def.type === 'categorical' ? p[key] : fmtVal(p[key], def.fmt); }
 
+function stdev(vals) {
+  const n = vals.length;
+  if (n < 2) return 0;
+  const mean = vals.reduce((a,b)=>a+b,0) / n;
+  return Math.sqrt(vals.reduce((a,b)=>a+(b-mean)**2, 0) / (n - 1));
+}
+
+// Groups points by a categorical key and summarizes a numeric key per group
+// (mean, sample stdev, n) — sorted by mean descending. This is what a
+// categorical-vs-numeric axis pair renders as, since a scatter position for
+// a category is an arbitrary frequency rank, not a real coordinate, and a
+// trend line fit through that arbitrary position is meaningless.
+function buildCategoryStats(pts, catKey, numKey) {
+  const groups = new Map();
+  pts.forEach(p => {
+    const cat = p[catKey];
+    if (!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat).push(p[numKey]);
+  });
+  return [...groups.entries()]
+    .map(([cat, vals]) => ({ cat, n: vals.length, mean: vals.reduce((a,b)=>a+b,0)/vals.length, sd: stdev(vals) }))
+    .sort((a, b) => b.mean - a.mean);
+}
+
 // For a categorical axis: map each category to an integer slot (sorted by
 // frequency desc, ties alphabetical), then deterministically jitter points
 // within their slot (sorted by name) so overlapping players stay visible.
@@ -259,7 +288,6 @@ function buildCategoricalAxis(pts, key) {
   return {
     isCategorical: true,
     getValue: p => catIndex.get(p[key]) + jitterOf.get(p),
-    getCorrValue: p => catIndex.get(p[key]),
     domainMin: -0.5, domainMax: categories.length - 0.5,
     ticks: categories.map((c,i) => ({ pos: i, label: String(c) })),
   };
@@ -270,7 +298,7 @@ function buildNumericAxis(pts, key, def) {
   const ticks = [];
   const n = 5;
   for (let i=0;i<=n;i++) { const v = min + (max-min)*i/n; ticks.push({ pos: v, label: fmtVal(v, def.fmt) }); }
-  return { isCategorical: false, getValue: p => p[key], getCorrValue: p => p[key], domainMin: min, domainMax: max, ticks };
+  return { isCategorical: false, getValue: p => p[key], domainMin: min, domainMax: max, ticks };
 }
 
 function render() {
@@ -290,18 +318,28 @@ function render() {
     return;
   }
 
-  const anyCategorical = xDef.type === 'categorical' || yDef.type === 'categorical';
-  const xAxis = xDef.type === 'categorical' ? buildCategoricalAxis(pts, xKey) : buildNumericAxis(pts, xKey, xDef);
-  const yAxis = yDef.type === 'categorical' ? buildCategoricalAxis(pts, yKey) : buildNumericAxis(pts, yKey, yDef);
+  const xCat = xDef.type === 'categorical', yCat = yDef.type === 'categorical';
 
-  const xs = pts.map(p => xAxis.getCorrValue(p));
-  const ys = pts.map(p => yAxis.getCorrValue(p));
-  const r = pearson(xs, ys);
-  const trend = linreg(xs, ys);
-  const abs = Math.abs(r);
-  const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
-  let badgeHtml = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
-  if (anyCategorical) badgeHtml += \`<span class="n-badge">categorical axis encoded by frequency rank</span>\`;
+  if (xCat !== yCat) {
+    renderBarChart(pts, xCat ? xKey : yKey, xCat ? yKey : xKey, xCat ? xDef : yDef, xCat ? yDef : xDef, isTeam);
+    return;
+  }
+
+  const xAxis = xCat ? buildCategoricalAxis(pts, xKey) : buildNumericAxis(pts, xKey, xDef);
+  const yAxis = yCat ? buildCategoricalAxis(pts, yKey) : buildNumericAxis(pts, yKey, yDef);
+
+  let trend = null;
+  let badgeHtml;
+  if (!xCat && !yCat) {
+    const xs = pts.map(p => p[xKey]), ys = pts.map(p => p[yKey]);
+    const r = pearson(xs, ys);
+    trend = linreg(xs, ys);
+    const abs = Math.abs(r);
+    const strength = abs>=0.5?'strong':abs>=0.3?'moderate':abs>=0.1?'weak':'negligible';
+    badgeHtml = \`<span class="r-badge">r = \${r.toFixed(3)}</span><span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${strength}</span>\`;
+  } else {
+    badgeHtml = \`<span class="n-badge">n = \${pts.length}</span><span class="strength-badge">both axes categorical — showing co-occurrence, no trend line</span>\`;
+  }
   if (isTeam) badgeHtml += \`<span class="n-badge">small sample — 4 teams</span>\`;
   badgesEl.innerHTML = badgeHtml;
 
@@ -352,6 +390,69 @@ function render() {
       tooltip.style.opacity = '1';
     });
     circle.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
+  });
+  chartHost.style.position = 'relative';
+}
+
+// One categorical + one numeric axis: a scatter position for a category is an
+// arbitrary frequency rank, so a trend line through it is meaningless. Show a
+// horizontal bar per category instead — mean ± stdev of the numeric stat.
+function renderBarChart(pts, catKey, numKey, catDef, numDef, isTeam) {
+  const rows = buildCategoryStats(pts, catKey, numKey);
+  const badgeHtml = \`<span class="n-badge">n = \${pts.length}</span><span class="strength-badge">\${rows.length} groups — mean \${numDef.label} \\u00b1 1 stdev</span>\`
+    + (isTeam ? \`<span class="n-badge">small sample — 4 teams</span>\` : '');
+  badgesEl.innerHTML = badgeHtml;
+
+  const rowH = 34, width = 800;
+  const margin = { top: 16, right: 70, bottom: 44, left: 160 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = rows.length * rowH;
+  const height = margin.top + plotH + margin.bottom;
+
+  const maxV = Math.max(...rows.map(r => r.mean + r.sd), 1e-9);
+  const minV = Math.min(0, ...rows.map(r => r.mean - r.sd));
+  const sx = v => margin.left + (v - minV) / (maxV - minV) * plotW;
+
+  let svg = \`<svg viewBox="0 0 \${width} \${height}" width="100%" height="\${height}">\`;
+  const xTicks = 5;
+  for (let i = 0; i <= xTicks; i++) {
+    const v = minV + (maxV-minV)*i/xTicks;
+    const x = sx(v);
+    svg += \`<line x1="\${x}" y1="\${margin.top}" x2="\${x}" y2="\${margin.top+plotH}" class="gridline"/>\`;
+    svg += \`<text x="\${x}" y="\${margin.top+plotH+18}" class="axis-label" text-anchor="middle">\${fmtVal(v, numDef.fmt)}</text>\`;
+  }
+  svg += \`<line x1="\${margin.left}" y1="\${margin.top}" x2="\${margin.left}" y2="\${margin.top+plotH}" class="axis-line"/>\`;
+
+  rows.forEach((r, i) => {
+    const y = margin.top + i*rowH;
+    const barY = y + 6, barH = rowH - 14;
+    const x0 = sx(0), x1 = sx(r.mean);
+    svg += \`<rect class="bar-track" x="\${margin.left}" y="\${barY}" width="\${plotW}" height="\${barH}" rx="3"/>\`;
+    svg += \`<rect class="bar-fill" data-i="\${i}" x="\${Math.min(x0,x1)}" y="\${barY}" width="\${Math.abs(x1-x0)}" height="\${barH}" rx="3"/>\`;
+    if (r.sd > 0) {
+      const ex0 = sx(Math.max(minV, r.mean - r.sd)), ex1 = sx(r.mean + r.sd);
+      const midY = barY + barH/2;
+      svg += \`<line x1="\${ex0}" y1="\${midY}" x2="\${ex1}" y2="\${midY}" class="err-bar"/>\`;
+      svg += \`<line x1="\${ex0}" y1="\${midY-4}" x2="\${ex0}" y2="\${midY+4}" class="err-cap"/>\`;
+      svg += \`<line x1="\${ex1}" y1="\${midY-4}" x2="\${ex1}" y2="\${midY+4}" class="err-cap"/>\`;
+    }
+    svg += \`<text x="\${margin.left-8}" y="\${barY+barH/2+4}" class="bar-label" text-anchor="end">\${r.cat}</text>\`;
+    svg += \`<text x="\${width-margin.right+8}" y="\${barY+barH/2+4}" class="bar-value" text-anchor="start">\${fmtVal(r.mean, numDef.fmt)} \\u00b1 \${fmtVal(r.sd, numDef.fmt)}</text>\`;
+  });
+
+  svg += \`<text x="\${margin.left + plotW/2}" y="\${height-6}" class="axis-title" text-anchor="middle">\${numDef.label}</text>\`;
+  svg += \`</svg>\`;
+  chartHost.innerHTML = svg;
+
+  chartHost.querySelectorAll('rect.bar-fill').forEach(rect => {
+    rect.addEventListener('mousemove', (e) => {
+      const r = rows[+rect.dataset.i];
+      tooltip.textContent = \`\${catDef.label}: \${r.cat} — mean \${numDef.label}: \${fmtVal(r.mean, numDef.fmt)} \\u00b1 \${fmtVal(r.sd, numDef.fmt)} (n = \${r.n})\`;
+      tooltip.style.left = (e.offsetX + 14) + 'px';
+      tooltip.style.top = (e.offsetY + 8) + 'px';
+      tooltip.style.opacity = '1';
+    });
+    rect.addEventListener('mouseleave', () => { tooltip.style.opacity = '0'; });
   });
   chartHost.style.position = 'relative';
 }
