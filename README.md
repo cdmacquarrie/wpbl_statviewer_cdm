@@ -65,19 +65,6 @@ One-time setup (repo owner, via the GitHub web UI): **Settings → Pages → Sou
 `https://cdmacquarrie.github.io/wpbl_statviewer_cdm/` on the next run (or trigger one now
 from the Actions tab → "Scrape and deploy WPBL dashboard" → Run workflow).
 
-## Output → published artifacts
-
-After running, publish each generated file to its **existing** artifact URL (do not mint new URLs —
-pass the `url` param so the link stays stable for the user):
-
-| File | Artifact URL |
-|---|---|
-| `output/wpbl_stats.html` | https://claude.ai/code/artifact/bbec1ffd-2e42-4f43-8746-7f2825408ed1 |
-| `output/wpbl_bios.html` | https://claude.ai/code/artifact/316df85d-8b74-4ef5-8052-9284798ffa72 |
-| `output/wpbl_analytics.html` | https://claude.ai/code/artifact/1145ca46-1246-4d56-98f9-5879a2c9b4ac |
-| `output/wpbl_explorer.html` | https://claude.ai/code/artifact/3c789b85-5417-46d5-9d56-90717a59af97 |
-| `output/wpbl_dashboard.html` | not yet published as a standalone artifact — combined tabbed view, see the live GitHub Pages site instead |
-
 ## Related fan projects
 
 A few other unofficial WPBL projects exist on GitHub — worth a look if you're building something
