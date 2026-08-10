@@ -61,6 +61,14 @@ const TEAM_STAT_DEFS = [
 const players = resultData.explorerPlayers;
 const teamStats = resultData.teamStats;
 
+// Sample-size language is computed from actual games played, not hardcoded, so it
+// doesn't silently go stale as the season progresses.
+const gamesPlayedList = teamStats.map(t => t.W + t.L);
+const minGamesPlayed = Math.min(...gamesPlayedList), maxGamesPlayed = Math.max(...gamesPlayedList);
+const gamesPlayedPhrase = minGamesPlayed === maxGamesPlayed
+  ? `${minGamesPlayed} game${minGamesPlayed === 1 ? '' : 's'}`
+  : `${minGamesPlayed}-${maxGamesPlayed} games`;
+
 const dataJson = JSON.stringify(players);
 const teamStatsJson = JSON.stringify(teamStats);
 const playerStatDefsJson = JSON.stringify(PLAYER_STAT_DEFS);
@@ -128,7 +136,7 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
       <p>Pick any two stats to plot every player and see the correlation between them, computed live in your browser.</p>
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(resultData.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
-    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games. Most players have single-digit plate appearances or innings pitched, so correlations here reflect one weekend, not a real trend. Every player with a stat line is included regardless of the site's "Signed" status, since that flag has lagged actual game participation for at least one player.</div>
+    <div class="caveat"><b>Sample-size warning:</b> teams have played ${gamesPlayedPhrase} so far this season. Most players still have single-digit plate appearances or innings pitched, so correlations here reflect early-season data, not a settled trend. Every player with a stat line is included regardless of the site's "Signed" status, since that flag has lagged actual game participation for at least one player.</div>
 
     <div class="controls">
       <div class="control-group">

@@ -6,6 +6,14 @@ const pcaPlayersJson = JSON.stringify(raw.pcaPlayers.map(p => ({ name: p.name, p
 const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
 const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
 
+// Sample-size language is computed from actual games played, not hardcoded, so it
+// doesn't silently go stale as the season progresses.
+const gamesPlayedList = data.teams.map(t => t.G);
+const minGamesPlayed = Math.min(...gamesPlayedList), maxGamesPlayed = Math.max(...gamesPlayedList);
+const gamesPlayedPhrase = minGamesPlayed === maxGamesPlayed
+  ? `${minGamesPlayed} game${minGamesPlayed === 1 ? '' : 's'}`
+  : `${minGamesPlayed}-${maxGamesPlayed} games`;
+
 function domain(vals, padFrac=0.12) {
   const min = Math.min(...vals), max = Math.max(...vals);
   const span = (max - min) || 1;
@@ -171,7 +179,7 @@ svg circle.pt-ana { cursor: pointer; }
       <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
     </header>
 
-    <div class="caveat"><b>Sample-size warning:</b> every team has played only 2 games, and the PCA below clusters on essentially one game's worth of rate stats per player. Treat every pattern as descriptive of these four opening games, not a predictive signal. Note: this includes anyone who's recorded a plate appearance, regardless of the site's "Signed" status — that flag has lagged actual game participation for at least one player.</div>
+    <div class="caveat"><b>Sample-size warning:</b> teams have played ${gamesPlayedPhrase} so far this season, and most batters have only a handful of plate appearances — the PCA below is still an early-season snapshot, not a predictive signal. Note: this includes anyone who's recorded a plate appearance, regardless of the site's "Signed" status — that flag has lagged actual game participation for at least one player.</div>
 
     <div class="legend-row">
       <span><i style="background:var(--la)"></i>Los Angeles</span>
