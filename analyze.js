@@ -14,6 +14,19 @@ function slugTeam(name) {
   return TEAM_ABBR[s] || name;
 }
 
+// The /stats/ page and the /prospect-ranking/ page encode some names with
+// different Unicode punctuation for the same player (e.g. Mo'ne Davis: a
+// curly U+2019 apostrophe from bios vs a straight U+0027 one from stats).
+// Exact-string matching/deduping on the raw name silently splits one player
+// into two disconnected identities - one with stats but a failed bio lookup
+// (status defaults to null), one with the correct bio but no stats. Every
+// cross-source name lookup below goes through this normalized key instead;
+// display always uses the original (unnormalized) name from whichever
+// record supplies it.
+function normalizeName(s) {
+  return s.normalize('NFKC').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').trim();
+}
+
 // ---- bios: attach age/bats/throws, normalize team to short code ----
 // Each round has a fixed 20 picks (verified against every round seen in the
 // scraped data — rounds 1-3 all cap at pick 20), so pickOverall recovers the
@@ -27,7 +40,7 @@ function parseDraft(sel) {
   const round = +m[1], pick = +m[2];
   return { round, pick, pickOverall: (round - 1) * ROUND_SIZE + pick };
 }
-const bioMap = new Map(raw.bios.map(b => [b.name, {
+const bioMap = new Map(raw.bios.map(b => [normalizeName(b.name), {
   age: b.age, pos: b.pos, bats: b.bats, throws: b.throws, hometown: b.hometown,
   team: slugTeam(b.team), status: b.status, url: b.url, ...parseDraft(b.draftSelection),
 }]));
@@ -37,7 +50,7 @@ function num(v) { return v == null || Number.isNaN(v) ? null : v; }
 function parseIPvalue(ip) { if (ip == null) return null; const whole = Math.floor(ip); const frac = Math.round((ip - whole) * 10); return whole + frac / 3; }
 
 const battingRows = raw.battingRaw.map(r => {
-  const bio = bioMap.get(r.name) || {};
+  const bio = bioMap.get(normalizeName(r.name)) || {};
   return {
     name: r.name, url: r.url, team: r.team, pos: r.pos,
     G: num(r.games_played), PA: num(r.plate_appearances), AB: num(r.at_bats),
@@ -50,7 +63,7 @@ const battingRows = raw.battingRaw.map(r => {
 });
 
 const pitchingRows = raw.pitchingRaw.map(r => {
-  const bio = bioMap.get(r.name) || {};
+  const bio = bioMap.get(normalizeName(r.name)) || {};
   return {
     name: r.name, url: r.url, team: r.team, pos: r.pos,
     G: num(r.games_played), GS: num(r.games_started), W: num(r.wins), L: num(r.losses),
@@ -229,7 +242,7 @@ const pcaProj = pca.predict(Z, {nComponents:2}).to2DArray();
 const pcaExplained = pca.getExplainedVariance().slice(0,2);
 
 const pcaPlayers = battingRows.map((r,i) => {
-  const bio = bioMap.get(r.name) || {};
+  const bio = bioMap.get(normalizeName(r.name)) || {};
   return {
     name: r.name, team: r.team, pos: r.pos,
     pc1: +pcaProj[i][0].toFixed(4), pc2: +pcaProj[i][1].toFixed(4),
@@ -251,13 +264,20 @@ const clusterLoadings = {
 // Union of everyone with a stat line AND everyone in the draft class, so bio-only
 // axes (draft pick, position, hometown, ...) plot the full pool rather than being
 // silently capped to the ~60 players who've also recorded a stat line.
-const batByName = new Map(battingRows.map(r => [r.name, r]));
-const pitchByName = new Map(pitchingRows.map(r => [r.name, r]));
-const allNames = new Set([...battingRows.map(r=>r.name), ...pitchingRows.map(r=>r.name), ...allBios.map(b=>b.name)]);
-const explorerPlayers = [...allNames].map(name => {
-  const bat = batByName.get(name) || {};
-  const pit = pitchByName.get(name) || {};
-  const bio = bioMap.get(name) || {};
+const batByName = new Map(battingRows.map(r => [normalizeName(r.name), r]));
+const pitchByName = new Map(pitchingRows.map(r => [normalizeName(r.name), r]));
+// Canonical display name per normalized identity — bios is the roster source of
+// truth, so its spelling/punctuation wins over whatever the stats page has.
+const displayNameByNorm = new Map();
+battingRows.forEach(r => { const k = normalizeName(r.name); if (!displayNameByNorm.has(k)) displayNameByNorm.set(k, r.name); });
+pitchingRows.forEach(r => { const k = normalizeName(r.name); if (!displayNameByNorm.has(k)) displayNameByNorm.set(k, r.name); });
+allBios.forEach(b => displayNameByNorm.set(normalizeName(b.name), b.name));
+const allNames = new Set([...battingRows.map(r=>normalizeName(r.name)), ...pitchingRows.map(r=>normalizeName(r.name)), ...allBios.map(b=>normalizeName(b.name))]);
+const explorerPlayers = [...allNames].map(normName => {
+  const name = displayNameByNorm.get(normName);
+  const bat = batByName.get(normName) || {};
+  const pit = pitchByName.get(normName) || {};
+  const bio = bioMap.get(normName) || {};
   const team = bat.team || pit.team || bio.team;
   const age = bat.age ?? pit.age ?? bio.age ?? null;
   return {
