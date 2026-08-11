@@ -2,6 +2,7 @@ const fs = require('fs');
 
 const SECTIONS = [
   { file: 'wpbl_stats.html', id: 'stats', tab: 'Team Stats' },
+  { file: 'wpbl_team.html', id: 'team', tab: 'Team Pages' },
   { file: 'wpbl_bios.html', id: 'bios', tab: 'Player Bios' },
   { file: 'wpbl_analytics.html', id: 'analytics', tab: 'At-Bat Analytics' },
   { file: 'wpbl_explorer.html', id: 'explorer', tab: 'Stat Explorer' },
