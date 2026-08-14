@@ -296,9 +296,39 @@ const explorerPlayers = [...allNames].map(normName => {
   };
 }).filter(p => p.team);
 
+// ---- season trend: game-by-game log from RetroWPBL (community Retrosheet-style
+// data, github.com/exu6jh/RetroWPBL), since our own /stats/ scrape only has
+// season totals, not a per-game breakdown. Missing/unreachable file degrades to
+// an empty trend rather than failing the whole pipeline. ----
+const retroGamesPath = './output/retrowpbl_gamelogs.json';
+const retroGames = fs.existsSync(retroGamesPath) ? JSON.parse(fs.readFileSync(retroGamesPath, 'utf8')) : [];
+const gamesByTeam = {};
+teamCodes.forEach(code => { gamesByTeam[code] = []; });
+retroGames.forEach(g => {
+  if (gamesByTeam[g.visTeam]) gamesByTeam[g.visTeam].push({ date: g.date, opponent: g.homeTeam, home: false, runsFor: g.visScore, runsAgainst: g.homeScore, win: g.visScore > g.homeScore });
+  if (gamesByTeam[g.homeTeam]) gamesByTeam[g.homeTeam].push({ date: g.date, opponent: g.visTeam, home: true, runsFor: g.homeScore, runsAgainst: g.visScore, win: g.homeScore > g.visScore });
+});
+const seasonTrend = {};
+teamCodes.forEach(code => {
+  let w = 0, l = 0, rd = 0;
+  seasonTrend[code] = gamesByTeam[code].map((g, i) => {
+    g.win ? w++ : l++;
+    rd += (g.runsFor - g.runsAgainst);
+    return { gameNum: i + 1, date: g.date, opponent: g.opponent, home: g.home, runsFor: g.runsFor, runsAgainst: g.runsAgainst, win: g.win, cumWinPct: w / (w + l), cumRunDiff: rd, record: `${w}-${l}` };
+  });
+});
+// Cross-check against the official scrape: RetroWPBL is volunteer-maintained
+// and can lag (or, being hand-verified against broadcasts, occasionally lead)
+// the official site by a game. Surface it as a caveat rather than presenting
+// two silently-conflicting win/loss totals.
+const retroGamesTotal = retroGames.length;
+const officialGamesTotal = teams.reduce((a, t) => a + t.G, 0) / 2;
+const seasonTrendInSync = retroGamesTotal === officialGamesTotal;
+
 const result = {
   scrapedAt: raw.scrapedAt,
   teams, teamCodes,
+  seasonTrend, seasonTrendInSync, retroGamesTotal, officialGamesTotal,
   qualBatters, sbLeaders, qualPitchers, soLeaders,
   bio: {
     avgAge, medianAge, minAge: Math.min(...ages), maxAge: Math.max(...ages), countryCount: nationality.length,

@@ -20,6 +20,60 @@ function placeLabel(t, teams) {
 const scrapedDate = new Date(d.scrapedAt);
 const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
+// ---- season trend: game-by-game line charts from RetroWPBL's community game
+// log (see README for attribution). One path per team, x = game number so
+// teams with different game counts still compare cleanly. ----
+function escapeAttr(s) { return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function multiLineSVG({ valueKey, yLabel, yFmt = v => v.toFixed(2), tipFmt, width = 800, height = 300 }) {
+  const margin = { top: 16, right: 40, bottom: 36, left: 52 };
+  const plotW = width - margin.left - margin.right;
+  const plotH = height - margin.top - margin.bottom;
+  const seriesByTeam = d.teamCodes.map(code => ({ code, series: d.seasonTrend[code] || [] }));
+  const maxGames = Math.max(1, ...seriesByTeam.map(s => s.series.length));
+  const allVals = seriesByTeam.flatMap(s => s.series.map(p => p[valueKey]));
+  if (!allVals.length) return '<p class="sub">No game log data available yet.</p>';
+  let yMin = Math.min(0, ...allVals), yMax = Math.max(0.001, ...allVals);
+  const ySpan = (yMax - yMin) || 1;
+  yMin -= ySpan * 0.1; yMax += ySpan * 0.1;
+  const sx = g => margin.left + (maxGames > 1 ? (g - 1) / (maxGames - 1) : 0.5) * plotW;
+  const sy = v => margin.top + plotH - (v - yMin) / (yMax - yMin) * plotH;
+
+  let svg = `<svg viewBox="0 0 ${width} ${height}" width="100%" height="${height}">`;
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = yMin + (yMax - yMin) * i / yTicks;
+    const y = sy(v);
+    svg += `<line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" class="gridline"/>`;
+    svg += `<text x="${margin.left - 8}" y="${y + 4}" class="axis-label" text-anchor="end">${yFmt(v)}</text>`;
+  }
+  for (let g = 1; g <= maxGames; g++) {
+    svg += `<text x="${sx(g)}" y="${height - margin.bottom + 20}" class="axis-label" text-anchor="middle">${g}</text>`;
+  }
+  if (yMin < 0 && yMax > 0) svg += `<line x1="${margin.left}" y1="${sy(0)}" x2="${width - margin.right}" y2="${sy(0)}" class="axis-line"/>`;
+  svg += `<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" class="axis-line"/>`;
+  svg += `<line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" class="axis-line"/>`;
+
+  seriesByTeam.forEach(({ code, series }) => {
+    if (!series.length) return;
+    const color = cssVar(code);
+    const path = series.map((p, i) => `${i === 0 ? 'M' : 'L'}${sx(p.gameNum).toFixed(1)},${sy(p[valueKey]).toFixed(1)}`).join(' ');
+    svg += `<path d="${path}" fill="none" stroke="${color}" stroke-width="2.5"/>`;
+    series.forEach(p => {
+      const tip = escapeAttr(`${TEAM_NAME[code]} — Game ${p.gameNum} (${p.home ? 'vs' : '@'} ${p.opponent}): ${p.win ? 'W' : 'L'} ${p.runsFor}-${p.runsAgainst}, ${tipFmt(p)}`);
+      svg += `<circle class="trend-pt" cx="${sx(p.gameNum).toFixed(1)}" cy="${sy(p[valueKey]).toFixed(1)}" r="4.5" fill="${color}" stroke="var(--surface-1)" stroke-width="1.5" data-tip="${tip}"/>`;
+    });
+    const last = series[series.length - 1];
+    svg += `<text x="${sx(last.gameNum) + 8}" y="${sy(last[valueKey]) + 4}" class="trend-team-label" fill="${color}">${code}</text>`;
+  });
+
+  svg += `<text x="${margin.left + plotW / 2}" y="${height - 4}" class="axis-title" text-anchor="middle">Game #</text>`;
+  svg += `<text x="14" y="${margin.top + plotH / 2}" class="axis-title" text-anchor="middle" transform="rotate(-90 14 ${margin.top + plotH / 2})">${yLabel}</text>`;
+  svg += `</svg>`;
+  return svg;
+}
+const winPctTrendSVG = multiLineSVG({ valueKey: 'cumWinPct', yLabel: 'Cumulative Win %', yFmt: v => v.toFixed(3).replace(/^0\./, '.'), tipFmt: p => `${p.record}, ${(p.cumWinPct*100).toFixed(1)}% cum.` });
+const runDiffTrendSVG = multiLineSVG({ valueKey: 'cumRunDiff', yLabel: 'Cumulative Run Diff', yFmt: v => (v>0?'+':'')+v.toFixed(0), tipFmt: p => `run diff ${p.cumRunDiff>0?'+':''}${p.cumRunDiff} cum.` });
+
 const teamCardsHtml = d.teams.map(t => `
       <div class="team-card">
         <div class="bar" style="background:${cssVar(t.code)}"></div>
@@ -107,6 +161,15 @@ header.page-head .cite { color: var(--text-muted); font-size: 11.5px; margin-top
 .legend-row span { display: inline-flex; align-items: center; gap: 6px; }
 .legend-row i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
 .toggle-row { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; cursor: pointer; width: fit-content; }
+svg text.axis-label { font-size: 9px; fill: var(--text-muted); font-family: system-ui, sans-serif; }
+svg text.axis-title { font-size: 10.5px; fill: var(--text-secondary); font-family: system-ui, sans-serif; font-weight: 600; }
+svg line.gridline { stroke: var(--grid); stroke-width: 1; }
+svg line.axis-line { stroke: var(--baseline); stroke-width: 1; }
+svg circle.trend-pt { cursor: pointer; }
+svg text.trend-team-label { font-size: 10px; font-weight: 700; font-family: system-ui, sans-serif; }
+.trend-credit { font-size: 11px; color: var(--text-muted); margin: -6px 0 18px; }
+.trend-credit a { color: var(--text-secondary); }
+.ana-tooltip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 1000; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 12px; display: flex; align-items: center; gap: 10px; }
 .section-title::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
 .disclaimer-footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--text-muted); text-align: center; line-height: 1.6; }
@@ -176,6 +239,22 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
     <div class="card"><div class="standings-grid">${standingsHtml}
       </div>
     </div>
+    <div class="section-title">Season Trend</div>
+    ${d.retroGamesTotal > 0 ? `
+    <div class="two-col">
+      <div class="card">
+        <h2>Cumulative Win %</h2>
+        <p class="sub">By game number, all teams on the same axis</p>
+        ${winPctTrendSVG}
+      </div>
+      <div class="card">
+        <h2>Cumulative Run Differential</h2>
+        <p class="sub">By game number</p>
+        ${runDiffTrendSVG}
+      </div>
+    </div>
+    <p class="trend-credit">Game-by-game data from <a href="https://github.com/exu6jh/RetroWPBL" target="_blank" rel="noopener">RetroWPBL</a>, a community Retrosheet-style log by u/revuetext, hand-checked against broadcasts.${d.seasonTrendInSync ? '' : ` It's tracking ${d.retroGamesTotal} of ${d.officialGamesTotal} games played league-wide so far — the trend charts may run a game or so behind the official standings above.`}</p>
+    ` : `<p class="sub">Season-trend data isn't available right now (RetroWPBL fetch failed or has no games yet).</p>`}
     <label class="toggle-row"><input type="checkbox" id="statsUnsignedToggle" checked> Include drafted (not yet signed) players</label>
     <div class="section-title">Batting Leaderboards</div>
     <div class="leader-grid" id="battingLeaderGrid"></div>
@@ -191,6 +270,7 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
     <div class="leader-grid" id="pitchingLeaderGrid"></div>
     <footer class="disclaimer-footer">Unofficial fan project — not affiliated with, endorsed by, or sponsored by the Women's Pro Baseball League. Stats and player data sourced from <a href="https://www.womensprobaseballleague.com" target="_blank" rel="noopener">womensprobaseballleague.com</a>. Built with <a href="https://claude.com/claude-code" target="_blank" rel="noopener">Claude</a>.</footer>
   </div>
+  <div class="ana-tooltip" id="trendTooltip"></div>
 </div>
 <script>
 (function(){
@@ -251,6 +331,17 @@ function render() {
 
 toggle.addEventListener('change', render);
 render();
+
+var trendTip = document.getElementById('trendTooltip');
+document.querySelectorAll('circle.trend-pt').forEach(function(c){
+  c.addEventListener('mousemove', function(e){
+    trendTip.textContent = c.dataset.tip;
+    trendTip.style.left = (e.clientX + 14) + 'px';
+    trendTip.style.top = (e.clientY + 10) + 'px';
+    trendTip.style.opacity = '1';
+  });
+  c.addEventListener('mouseleave', function(){ trendTip.style.opacity = '0'; });
+});
 })();
 </script>
 `;

@@ -2,7 +2,7 @@
   "name": "wpbl-stats-dashboards",
   "version": "1.0.0",
   "private": true,
-  "description": "Scrapes womensprobaseballleague.com daily and regenerates 4 static HTML dashboards (team/player stats, player bios, bio x performance analytics, interactive stat explorer).",
+  "description": "Unofficial WPBL fan dashboard: scrapes womensprobaseballleague.com and RetroWPBL daily and regenerates 5 HTML dashboards (team/player stats with season-trend charts, player bios, at-bat analytics, interactive stat explorer, per-team pages).",
   "scripts": {
     "start": "node run_all.js"
   },

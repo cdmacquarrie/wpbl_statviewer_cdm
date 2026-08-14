@@ -5,14 +5,31 @@ project is **not affiliated with, endorsed by, or sponsored by the WPBL**. All u
 player bios, and draft data are sourced from the league's own public site,
 [womensprobaseballleague.com](https://www.womensprobaseballleague.com) — go there for official
 information. Every generated page links back to it and carries the same disclaimer in its footer.
+Game-by-game season-trend data comes from a second source — see **Data sources** below.
 
 Built with [Claude Code](https://claude.com/claude-code): the scraper, analysis pipeline, dashboard
 pages, and this README were written by Claude in an interactive session with the repo owner, not
 hand-coded from scratch.
 
-Scrapes the league site daily and regenerates four HTML dashboards (Team Stats, Player Bios,
-At-Bat Analytics, Stat Explorer), combined into one tabbed page. All site data is server-rendered
-(no headless browser needed — plain `fetch` + `cheerio` is enough).
+Scrapes the league site daily and regenerates five HTML dashboards (Team Stats, Player Bios,
+At-Bat Analytics, Stat Explorer, per-team pages), combined into one tabbed page. All site data is
+server-rendered (no headless browser needed — plain `fetch` + `cheerio` is enough).
+
+## Data sources
+
+- **[womensprobaseballleague.com](https://www.womensprobaseballleague.com)** — the league's own
+  site: season stat totals, standings, player bios, and the draft class. The primary source for
+  everything except the season-trend charts below.
+- **[RetroWPBL](https://github.com/exu6jh/RetroWPBL)** by [u/revuetext](https://www.reddit.com/user/revuetext/)
+  — a community-maintained, Retrosheet-style game log for the 2026 season, hand-checked against
+  broadcasts. The official site only publishes season totals, not a per-game breakdown, so this is
+  what powers the Cumulative Win % / Run Differential trend charts on the Team Stats page — a
+  capability the official site's own data can't provide. Fetched fresh on every run
+  (`fetch_retrowpbl.js`); if it's unreachable or a game or two behind the official site, the
+  pipeline degrades gracefully (empty/partial trend, with a caveat noting the gap) rather than
+  failing.
+- **[Nominatim](https://nominatim.openstreetmap.org)** (OpenStreetMap) — geocodes player hometowns
+  for the "distance from Springfield, IL" stat, cached in-repo so it's only hit for new hometowns.
 
 ## Run it
 
@@ -29,12 +46,15 @@ This runs, in order:
 2. `geocode.js` — geocodes each unique hometown via Nominatim (OpenStreetMap, no API key) and caches
    lat/lon + distance-from-Springfield-IL (where every 2026 game is played) in the **repo-tracked**
    `hometown_geocache.json`, so only newly-seen hometowns hit the network on later runs.
-3. `analyze.js` — merges bios with stats, computes standings/per-game rates/run differential,
-   full batting/pitching leaderboards, age & nationality demographics, and a PCA embedding (+ real
-   eigenvector loadings) of each batter's at-bat rate-stat profile → `output/result.json`
-4. `build_stats.js`, `build_bios.js`, `build_analytics.js`, `build_explorer.js` — each reads
-   `output/result.json` and writes one self-contained HTML file to `output/`.
-5. `build_dashboard.js` — combines all four into one tabbed `output/wpbl_dashboard.html` (scopes
+3. `fetch_retrowpbl.js` — fetches and parses the RetroWPBL game log (see **Data sources**) into
+   `output/retrowpbl_gamelogs.json`; failures degrade to an empty list, not a broken build.
+4. `analyze.js` — merges bios with stats, computes standings/per-game rates/run differential,
+   full batting/pitching leaderboards, age & nationality demographics, a PCA embedding (+ real
+   eigenvector loadings) of each batter's at-bat rate-stat profile, and per-team game-by-game
+   season-trend series (from step 3) → `output/result.json`
+5. `build_stats.js`, `build_bios.js`, `build_analytics.js`, `build_explorer.js`, `build_team.js` —
+   each reads `output/result.json` and writes one self-contained HTML file to `output/`.
+6. `build_dashboard.js` — combines them into one tabbed `output/wpbl_dashboard.html` (scopes
    each panel's CSS and wraps each panel's script in its own IIFE so identical class/variable names
    across the source pages can't collide once they share one document).
 
