@@ -1,5 +1,6 @@
 const fs = require('fs');
 const d = require('./output/result.json');
+const STAT_DEFS = require('./stat_definitions.js');
 
 const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
 const TEAM_CITY = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
@@ -18,6 +19,7 @@ const teamColorJson = JSON.stringify(TEAM_COLOR);
 const teamCityJson = JSON.stringify(TEAM_CITY);
 const teamNicknameJson = JSON.stringify(TEAM_NICKNAME);
 const teamCodesJson = JSON.stringify(d.teamCodes);
+const statDefsJson = JSON.stringify(STAT_DEFS);
 
 const tabButtons = d.teamCodes.map((code, i) =>
   `<button class="team-tab${i===0?' active':''}" data-team="${code}" style="--tab-color:${TEAM_COLOR[code]}">${TEAM_CITY[code]} <b>${TEAM_NICKNAME[code]}</b></button>`
@@ -132,6 +134,8 @@ const TEAM_COLOR = ${teamColorJson};
 const TEAM_CITY = ${teamCityJson};
 const TEAM_NICKNAME = ${teamNicknameJson};
 const TEAM_CODES = ${teamCodesJson};
+const STAT_DEFS = ${statDefsJson};
+function defTitle(key) { return STAT_DEFS[key] ? ' title="' + STAT_DEFS[key].replace(/"/g, '&quot;') + '"' : ''; }
 
 function ordinal(n) {
   const v = n % 100;
@@ -171,7 +175,7 @@ function renderSortableTable(tableId, columns, rows, extraRowClass, defaultKey) 
     const key = c.sortKey || c.key;
     const isSorted = st.key === key;
     const arrow = isSorted ? '<span class="arrow">' + (st.dir === 'asc' ? '\\u25b2' : '\\u25bc') + '</span>' : '';
-    return '<th data-key="' + key + '" class="' + (isSorted ? 'sorted' : '') + '">' + c.label + arrow + '</th>';
+    return '<th data-key="' + key + '"' + defTitle(c.label) + ' class="' + (isSorted ? 'sorted' : '') + '">' + c.label + arrow + '</th>';
   }).join('') + '</tr></thead>';
   const tbody = '<tbody>' + sorted.map(function(row) {
     const cls = extraRowClass ? extraRowClass(row) : '';
@@ -296,14 +300,14 @@ function render() {
     '<div class="head"><div class="nickname" style="color:' + TEAM_COLOR[currentTeam] + '">' + TEAM_CITY[currentTeam] + ' ' + TEAM_NICKNAME[currentTeam] + '</div>' +
     '<div class="rec">' + t.W + '\\u2013' + t.L + '</div><div class="place">' + placeLabel(t) + ' place \\u00b7 ' + t.pct.toFixed(3).replace(/^0\\./,'.') + '</div></div>' +
     '<div class="stats">' +
-    '<div class="stat-cell"><div class="v">' + t.perGame.R.toFixed(1) + '</div><div class="k">R/G</div></div>' +
-    '<div class="stat-cell"><div class="v">' + t.perGame.RA.toFixed(1) + '</div><div class="k">RA/G</div></div>' +
-    '<div class="stat-cell ' + (t.runDiff>0?'diff-pos':t.runDiff<0?'diff-neg':'') + '"><div class="v">' + (t.runDiff>0?'+':'') + t.runDiff + '</div><div class="k">Run Diff</div></div>' +
-    '<div class="stat-cell"><div class="v">' + fmt3(t.AVG) + '</div><div class="k">AVG</div></div>' +
-    '<div class="stat-cell"><div class="v">' + (t.ERA!=null?t.ERA.toFixed(2):'\\u2014') + '</div><div class="k">ERA</div></div>' +
-    '<div class="stat-cell"><div class="v">' + (t.WHIP!=null?t.WHIP.toFixed(2):'\\u2014') + '</div><div class="k">WHIP</div></div>' +
-    '<div class="stat-cell"><div class="v">' + t.perGame.HR.toFixed(1) + '</div><div class="k">HR/G</div></div>' +
-    '<div class="stat-cell"><div class="v">' + fmt3(t.FPCT) + '</div><div class="k">FPCT</div></div>' +
+    '<div class="stat-cell"><div class="v">' + t.perGame.R.toFixed(1) + '</div><div class="k"' + defTitle('R/G') + '>R/G</div></div>' +
+    '<div class="stat-cell"><div class="v">' + t.perGame.RA.toFixed(1) + '</div><div class="k"' + defTitle('RA/G') + '>RA/G</div></div>' +
+    '<div class="stat-cell ' + (t.runDiff>0?'diff-pos':t.runDiff<0?'diff-neg':'') + '"><div class="v">' + (t.runDiff>0?'+':'') + t.runDiff + '</div><div class="k"' + defTitle('RUN DIFF') + '>Run Diff</div></div>' +
+    '<div class="stat-cell"><div class="v">' + fmt3(t.AVG) + '</div><div class="k"' + defTitle('AVG') + '>AVG</div></div>' +
+    '<div class="stat-cell"><div class="v">' + (t.ERA!=null?t.ERA.toFixed(2):'\\u2014') + '</div><div class="k"' + defTitle('ERA') + '>ERA</div></div>' +
+    '<div class="stat-cell"><div class="v">' + (t.WHIP!=null?t.WHIP.toFixed(2):'\\u2014') + '</div><div class="k"' + defTitle('WHIP') + '>WHIP</div></div>' +
+    '<div class="stat-cell"><div class="v">' + t.perGame.HR.toFixed(1) + '</div><div class="k"' + defTitle('HR/G') + '>HR/G</div></div>' +
+    '<div class="stat-cell"><div class="v">' + fmt3(t.FPCT) + '</div><div class="k"' + defTitle('FPCT') + '>FPCT</div></div>' +
     '</div></div>';
 
   const batters = players.filter(function(p){ return p.AB != null; });

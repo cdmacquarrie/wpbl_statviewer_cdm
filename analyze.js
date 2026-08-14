@@ -345,10 +345,18 @@ retroGames.forEach(g => {
   headToHead[g.homeTeam][g.visTeam][visWin ? 'l' : 'w']++;
 });
 
+// Remaining schedule: full-season schedule minus games already played (matched
+// on date + matchup, not just date, in case of same-day doubleheaders or
+// postponements/makeups shifting a date).
+const schedulePath = './output/retrowpbl_schedule.json';
+const fullSchedule = fs.existsSync(schedulePath) ? JSON.parse(fs.readFileSync(schedulePath, 'utf8')) : [];
+const playedKeys = new Set(retroGames.map(g => `${g.date}|${g.visTeam}|${g.homeTeam}`));
+const remainingSchedule = fullSchedule.filter(g => !g.postponed && !playedKeys.has(`${g.date}|${g.visTeam}|${g.homeTeam}`));
+
 const result = {
   scrapedAt: raw.scrapedAt,
   teams, teamCodes,
-  seasonTrend, seasonTrendInSync, retroGamesTotal, officialGamesTotal, headToHead,
+  seasonTrend, seasonTrendInSync, retroGamesTotal, officialGamesTotal, headToHead, remainingSchedule,
   qualBatters, sbLeaders, qualPitchers, soLeaders,
   bio: {
     avgAge, medianAge, minAge: Math.min(...ages), maxAge: Math.max(...ages), countryCount: nationality.length,

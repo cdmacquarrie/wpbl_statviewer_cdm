@@ -1,9 +1,11 @@
 const fs = require('fs');
 const d = require('./output/result.json');
+const STAT_DEFS = require('./stat_definitions.js');
 
 const TEAM_COLOR = { LA: '#ab7d2e', NY: '#1d4fd6', SF: '#a020a0', BOS: '#1f7a45' };
 const TEAM_NAME = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS: 'Boston' };
 const cssVar = t => `var(--${t.toLowerCase()})`;
+function defTitle(key) { return STAT_DEFS[key] ? ` title="${STAT_DEFS[key].replace(/"/g, '&quot;')}"` : ''; }
 
 function fmt3(v) { return v == null ? '—' : v.toFixed(3).replace(/^0\./,'.').replace(/^-0\./,'-.'); }
 function fmtIP(ip) { if (ip==null) return '—'; const whole = Math.floor(ip); const frac = Math.round((ip-whole)*3); return `${whole}.${frac}`; }
@@ -88,14 +90,14 @@ const teamCardsHtml = d.teams.map(t => `
           <div class="place">${placeLabel(t, d.teams)} place · ${t.pct.toFixed(3).replace(/^0\./,'.')} ${streakBadge(t.streak)}</div>
         </div>
         <div class="stats">
-          <div class="stat-cell"><div class="v">${t.perGame.R.toFixed(1)}</div><div class="k">R/G</div></div>
-          <div class="stat-cell"><div class="v">${t.perGame.RA.toFixed(1)}</div><div class="k">RA/G</div></div>
-          <div class="stat-cell ${t.runDiff>0?'diff-pos':t.runDiff<0?'diff-neg':''}"><div class="v">${t.runDiff>0?'+':''}${t.runDiff}</div><div class="k">Run Diff</div></div>
-          <div class="stat-cell"><div class="v">${fmt3(t.AVG)}</div><div class="k">AVG</div></div>
-          <div class="stat-cell"><div class="v">${t.ERA?.toFixed(2) ?? '—'}</div><div class="k">ERA</div></div>
-          <div class="stat-cell"><div class="v">${t.WHIP?.toFixed(2) ?? '—'}</div><div class="k">WHIP</div></div>
-          <div class="stat-cell"><div class="v">${t.perGame.HR.toFixed(1)}</div><div class="k">HR/G</div></div>
-          <div class="stat-cell"><div class="v">${fmt3(t.FPCT)}</div><div class="k">FPCT</div></div>
+          <div class="stat-cell"><div class="v">${t.perGame.R.toFixed(1)}</div><div class="k"${defTitle('R/G')}>R/G</div></div>
+          <div class="stat-cell"><div class="v">${t.perGame.RA.toFixed(1)}</div><div class="k"${defTitle('RA/G')}>RA/G</div></div>
+          <div class="stat-cell ${t.runDiff>0?'diff-pos':t.runDiff<0?'diff-neg':''}"><div class="v">${t.runDiff>0?'+':''}${t.runDiff}</div><div class="k"${defTitle('RUN DIFF')}>Run Diff</div></div>
+          <div class="stat-cell"><div class="v">${fmt3(t.AVG)}</div><div class="k"${defTitle('AVG')}>AVG</div></div>
+          <div class="stat-cell"><div class="v">${t.ERA?.toFixed(2) ?? '—'}</div><div class="k"${defTitle('ERA')}>ERA</div></div>
+          <div class="stat-cell"><div class="v">${t.WHIP?.toFixed(2) ?? '—'}</div><div class="k"${defTitle('WHIP')}>WHIP</div></div>
+          <div class="stat-cell"><div class="v">${t.perGame.HR.toFixed(1)}</div><div class="k"${defTitle('HR/G')}>HR/G</div></div>
+          <div class="stat-cell"><div class="v">${fmt3(t.FPCT)}</div><div class="k"${defTitle('FPCT')}>FPCT</div></div>
         </div>
       </div>`).join('');
 
@@ -103,7 +105,7 @@ const standingsHtml = d.teams.map(t => `
         <div class="team-tile">
           <div class="dot-row"><i class="dot" style="background:${cssVar(t.code)}"></i><span class="city">${t.name}</span></div>
           <div class="rec">${t.W}–${t.L}</div>
-          <div class="meta">${t.pct.toFixed(3).replace(/^0\./,'.')} PCT &middot; GB ${t.gb===0?'—':t.gb}</div>
+          <div class="meta"><span${defTitle('PCT')}>${t.pct.toFixed(3).replace(/^0\./,'.')} PCT</span> &middot; <span${defTitle('GB')}>GB ${t.gb===0?'—':t.gb}</span></div>
         </div>`).join('');
 
 const legendHtml = d.teamCodes.map(c => `<span><i style="background:var(--${c.toLowerCase()})"></i>${TEAM_NAME[c]}</span>`).join('\n      ');
@@ -118,6 +120,17 @@ const h2hHtml = `
           return `<td>${rec.w}-${rec.l}</td>`;
         }).join('')}</tr>`).join('')}</tbody>
     </table>`;
+
+function fmtSchedDate(dateStr8) {
+  const y = dateStr8.slice(0,4), m = dateStr8.slice(4,6), dd = dateStr8.slice(6,8);
+  return new Date(Date.UTC(+y, +m-1, +dd)).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+}
+const scheduleRowsHtml = (d.remainingSchedule || []).map(g => `
+        <tr>
+          <td>${g.day}, ${fmtSchedDate(g.date)}</td>
+          <td><span style="color:${cssVar(g.visTeam)}">${TEAM_NAME[g.visTeam]}</span> @ <span style="color:${cssVar(g.homeTeam)}">${TEAM_NAME[g.homeTeam]}</span></td>
+          <td>${g.dayNight === 'd' ? 'Day' : 'Night'}</td>
+        </tr>`).join('');
 
 // ---- leaderboard datasets + card defs, embedded for client-side re-render on toggle ----
 const battingSub = 'Qualified (5+ at-bats)';
@@ -152,6 +165,7 @@ const datasetsJson = JSON.stringify({
 const battingCardsJson = JSON.stringify(BATTING_CARDS);
 const pitchingCardsJson = JSON.stringify(PITCHING_CARDS);
 const teamColorJson = JSON.stringify(TEAM_COLOR);
+const statDefsJson = JSON.stringify(STAT_DEFS);
 
 const html = `<title>WPBL 2026 Stats</title>
 <style>
@@ -194,6 +208,12 @@ table.h2h-table thead th { font-weight: 700; text-transform: uppercase; letter-s
 table.h2h-table tbody th { text-align: left; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 11px; }
 table.h2h-table td { font-variant-numeric: tabular-nums; color: var(--text-primary); }
 table.h2h-table td.h2h-self { color: var(--text-muted); }
+table.sched-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+table.sched-table th { text-align: left; font-weight: 700; color: var(--text-muted); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.03em; padding: 6px 8px; border-bottom: 1px solid var(--baseline); }
+table.sched-table td { padding: 7px 8px; border-bottom: 1px solid var(--grid); color: var(--text-primary); white-space: nowrap; }
+table.sched-table tbody { display: block; max-height: 340px; overflow-y: auto; }
+table.sched-table thead, table.sched-table tbody tr { display: table; width: 100%; table-layout: fixed; }
+table.sched-table tbody tr:last-child td { border-bottom: none; }
 table.h2h-table tbody tr:last-child th, table.h2h-table tbody tr:last-child td { border-bottom: none; }
 .ana-tooltip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 1000; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 12px; display: flex; align-items: center; gap: 10px; }
@@ -280,10 +300,20 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
       </div>
     </div>
     <p class="trend-credit">Game-by-game data from <a href="https://github.com/exu6jh/RetroWPBL" target="_blank" rel="noopener">RetroWPBL</a>, a community Retrosheet-style log by u/revuetext, hand-checked against broadcasts.${d.seasonTrendInSync ? '' : ` It's tracking ${d.retroGamesTotal} of ${d.officialGamesTotal} games played league-wide so far — the trend charts may run a game or so behind the official standings above.`}</p>
-    <div class="card">
-      <h2>Head-to-Head</h2>
-      <p class="sub">Row team's record against column team, from RetroWPBL's game log</p>
-      ${h2hHtml}
+    <div class="two-col">
+      <div class="card">
+        <h2>Head-to-Head</h2>
+        <p class="sub">Row team's record against column team, from RetroWPBL's game log</p>
+        ${h2hHtml}
+      </div>
+      <div class="card">
+        <h2>Remaining Schedule</h2>
+        <p class="sub">${d.remainingSchedule.length} games left, from RetroWPBL's season schedule</p>
+        <table class="sched-table">
+          <thead><tr><th>Date</th><th>Matchup</th><th>D/N</th></tr></thead>
+          <tbody>${scheduleRowsHtml}</tbody>
+        </table>
+      </div>
     </div>
     ` : `<p class="sub">Season-trend data isn't available right now (RetroWPBL fetch failed or has no games yet).</p>`}
     <label class="toggle-row"><input type="checkbox" id="statsUnsignedToggle" checked> Include drafted (not yet signed) players</label>
@@ -294,7 +324,7 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
       <h2>Pitching Leaders</h2>
       <p class="sub">Qualified (2.0+ innings pitched), sorted by ERA</p>
       <table class="pitch-table">
-        <thead><tr><th>Pitcher</th><th>IP</th><th>W-L</th><th>ERA</th><th>SO</th><th>WHIP</th></tr></thead>
+        <thead><tr><th>Pitcher</th><th${defTitle('IP')}>IP</th><th${defTitle('W-L')}>W-L</th><th${defTitle('ERA')}>ERA</th><th${defTitle('SO')}>SO</th><th${defTitle('WHIP')}>WHIP</th></tr></thead>
         <tbody id="pitchTableBody"></tbody>
       </table>
     </div>
@@ -309,7 +339,9 @@ const DATA = ${datasetsJson};
 const BATTING_CARDS = ${battingCardsJson};
 const PITCHING_CARDS = ${pitchingCardsJson};
 const TEAM_COLOR = ${teamColorJson};
+const STAT_DEFS = ${statDefsJson};
 const cssVar = t => 'var(--' + t.toLowerCase() + ')';
+function defTitle(key) { return STAT_DEFS[key] ? ' title="' + STAT_DEFS[key].replace(/"/g, '&quot;') + '"' : ''; }
 const FMT = {
   fmt3: v => v == null ? '\\u2014' : v.toFixed(3).replace(/^0\\./,'.').replace(/^-0\\./,'-.'),
   fmt2: v => v == null ? '\\u2014' : v.toFixed(2),
@@ -340,7 +372,7 @@ function leaderboardCard(def, players) {
     return hbarRow(p._rank, p.name, p.team, width, '<b>' + fmt(p[def.key]) + '</b>' + (def.unit||''), p.url);
   }).join('');
   const extra = sorted.length - top.length;
-  return '<div class="card"><h2>' + def.title + '</h2><p class="sub">' + def.sub + '</p><div class="hbar-list">' + rows + '</div>' +
+  return '<div class="card"><h2' + defTitle(def.key) + '>' + def.title + '</h2><p class="sub">' + def.sub + '</p><div class="hbar-list">' + rows + '</div>' +
     (extra > 0 ? '<p class="sub" style="margin:14px 0 0;">' + extra + ' more player' + (extra===1?'':'s') + ' not shown</p>' : '') + '</div>';
 }
 
