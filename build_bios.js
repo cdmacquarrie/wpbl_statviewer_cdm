@@ -7,7 +7,7 @@ const S_PALETTE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#0083
 const cssVar = t => `var(--${t.toLowerCase()})`;
 
 const scrapedDate = new Date(d.scrapedAt);
-const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
 
 // Flat per-player list (all teams) — the client recomputes every aggregate below
 // from this when the Signed/Drafted toggle changes, so nothing on the page is

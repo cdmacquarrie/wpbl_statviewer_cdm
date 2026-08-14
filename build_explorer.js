@@ -134,7 +134,7 @@ svg text.bar-value { font-size: 11px; fill: var(--text-secondary); font-family: 
       <div class="kicker">2026 Regular Season</div>
       <h1>WPBL Stat Explorer</h1>
       <p>Pick any two stats to plot every player and see the correlation between them, computed live in your browser.</p>
-      <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(resultData.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
+      <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(resultData.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' })} · auto-updated daily</p>
     </header>
     <div class="caveat"><b>Sample-size warning:</b> teams have played ${gamesPlayedPhrase} so far this season. Most players still have single-digit plate appearances or innings pitched, so correlations here reflect early-season data, not a settled trend. Every player with a stat line is included regardless of the site's "Signed" status, since that flag has lagged actual game participation for at least one player.</div>
 

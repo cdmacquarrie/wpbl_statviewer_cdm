@@ -18,7 +18,7 @@ function placeLabel(t, teams) {
 }
 
 const scrapedDate = new Date(d.scrapedAt);
-const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
 
 // ---- season trend: game-by-game line charts from RetroWPBL's community game
 // log (see README for attribution). One path per team, x = game number so
@@ -74,13 +74,18 @@ function multiLineSVG({ valueKey, yLabel, yFmt = v => v.toFixed(2), tipFmt, widt
 const winPctTrendSVG = multiLineSVG({ valueKey: 'cumWinPct', yLabel: 'Cumulative Win %', yFmt: v => v.toFixed(3).replace(/^0\./, '.'), tipFmt: p => `${p.record}, ${(p.cumWinPct*100).toFixed(1)}% cum.` });
 const runDiffTrendSVG = multiLineSVG({ valueKey: 'cumRunDiff', yLabel: 'Cumulative Run Diff', yFmt: v => (v>0?'+':'')+v.toFixed(0), tipFmt: p => `run diff ${p.cumRunDiff>0?'+':''}${p.cumRunDiff} cum.` });
 
+function streakBadge(streak) {
+  if (!streak) return '';
+  return `<span class="streak-badge ${streak.type === 'W' ? 'streak-w' : 'streak-l'}">${streak.type}${streak.count}</span>`;
+}
+
 const teamCardsHtml = d.teams.map(t => `
       <div class="team-card">
         <div class="bar" style="background:${cssVar(t.code)}"></div>
         <div class="head">
           <div class="city" style="color:${cssVar(t.code)}">${t.name}</div>
           <div class="rec">${t.W}–${t.L}</div>
-          <div class="place">${placeLabel(t, d.teams)} place · ${t.pct.toFixed(3).replace(/^0\./,'.')}</div>
+          <div class="place">${placeLabel(t, d.teams)} place · ${t.pct.toFixed(3).replace(/^0\./,'.')} ${streakBadge(t.streak)}</div>
         </div>
         <div class="stats">
           <div class="stat-cell"><div class="v">${t.perGame.R.toFixed(1)}</div><div class="k">R/G</div></div>
@@ -102,6 +107,17 @@ const standingsHtml = d.teams.map(t => `
         </div>`).join('');
 
 const legendHtml = d.teamCodes.map(c => `<span><i style="background:var(--${c.toLowerCase()})"></i>${TEAM_NAME[c]}</span>`).join('\n      ');
+
+const h2hHtml = `
+    <table class="h2h-table">
+      <thead><tr><th></th>${d.teamCodes.map(c => `<th style="color:${cssVar(c)}">${c}</th>`).join('')}</tr></thead>
+      <tbody>${d.teamCodes.map(rowCode => `
+        <tr><th style="color:${cssVar(rowCode)}">${rowCode}</th>${d.teamCodes.map(colCode => {
+          if (rowCode === colCode) return '<td class="h2h-self">—</td>';
+          const rec = d.headToHead[rowCode][colCode];
+          return `<td>${rec.w}-${rec.l}</td>`;
+        }).join('')}</tr>`).join('')}</tbody>
+    </table>`;
 
 // ---- leaderboard datasets + card defs, embedded for client-side re-render on toggle ----
 const battingSub = 'Qualified (5+ at-bats)';
@@ -169,6 +185,16 @@ svg circle.trend-pt { cursor: pointer; }
 svg text.trend-team-label { font-size: 10px; font-weight: 700; font-family: system-ui, sans-serif; }
 .trend-credit { font-size: 11px; color: var(--text-muted); margin: -6px 0 18px; }
 .trend-credit a { color: var(--text-secondary); }
+.streak-badge { display: inline-block; font-weight: 700; padding: 1px 6px; border-radius: 4px; font-size: 10px; letter-spacing: 0.02em; }
+.streak-badge.streak-w { background: rgba(12,163,12,0.12); color: var(--good); }
+.streak-badge.streak-l { background: rgba(208,59,59,0.12); color: var(--bad); }
+table.h2h-table { border-collapse: collapse; font-size: 12.5px; }
+table.h2h-table th, table.h2h-table td { padding: 8px 14px; text-align: center; border-bottom: 1px solid var(--grid); }
+table.h2h-table thead th { font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 11px; border-bottom: 1px solid var(--baseline); }
+table.h2h-table tbody th { text-align: left; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; font-size: 11px; }
+table.h2h-table td { font-variant-numeric: tabular-nums; color: var(--text-primary); }
+table.h2h-table td.h2h-self { color: var(--text-muted); }
+table.h2h-table tbody tr:last-child th, table.h2h-table tbody tr:last-child td { border-bottom: none; }
 .ana-tooltip { position: fixed; pointer-events: none; background: var(--text-primary); color: var(--surface-1); font-size: 12px; padding: 6px 9px; border-radius: 6px; opacity: 0; transition: opacity 0.1s; white-space: nowrap; z-index: 1000; }
 .section-title { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin: 32px 0 12px; display: flex; align-items: center; gap: 10px; }
 .section-title::after { content: ""; flex: 1; height: 1px; background: var(--grid); }
@@ -254,6 +280,11 @@ table.pitch-table tbody tr:last-child td { border-bottom: none; }
       </div>
     </div>
     <p class="trend-credit">Game-by-game data from <a href="https://github.com/exu6jh/RetroWPBL" target="_blank" rel="noopener">RetroWPBL</a>, a community Retrosheet-style log by u/revuetext, hand-checked against broadcasts.${d.seasonTrendInSync ? '' : ` It's tracking ${d.retroGamesTotal} of ${d.officialGamesTotal} games played league-wide so far — the trend charts may run a game or so behind the official standings above.`}</p>
+    <div class="card">
+      <h2>Head-to-Head</h2>
+      <p class="sub">Row team's record against column team, from RetroWPBL's game log</p>
+      ${h2hHtml}
+    </div>
     ` : `<p class="sub">Season-trend data isn't available right now (RetroWPBL fetch failed or has no games yet).</p>`}
     <label class="toggle-row"><input type="checkbox" id="statsUnsignedToggle" checked> Include drafted (not yet signed) players</label>
     <div class="section-title">Batting Leaderboards</div>

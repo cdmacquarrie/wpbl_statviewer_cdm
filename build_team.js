@@ -6,7 +6,7 @@ const TEAM_CITY = { LA: 'Los Angeles', NY: 'New York', SF: 'San Francisco', BOS:
 const TEAM_NICKNAME = { LA: 'Queens', NY: 'Heights', SF: 'Firebells', BOS: 'Hunters' };
 
 const scrapedDate = new Date(d.scrapedAt);
-const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+const dateStr = scrapedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' });
 
 function fmt3(v) { return v == null ? '—' : v.toFixed(3).replace(/^0\./,'.').replace(/^-0\./,'-.'); }
 

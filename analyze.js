@@ -325,10 +325,30 @@ const retroGamesTotal = retroGames.length;
 const officialGamesTotal = teams.reduce((a, t) => a + t.G, 0) / 2;
 const seasonTrendInSync = retroGamesTotal === officialGamesTotal;
 
+// Current win/loss streak, from the tail of each team's game log.
+teams.forEach(t => {
+  const games = gamesByTeam[t.code];
+  if (!games.length) { t.streak = null; return; }
+  const last = games[games.length - 1].win;
+  let count = 0;
+  for (let i = games.length - 1; i >= 0 && games[i].win === last; i--) count++;
+  t.streak = { type: last ? 'W' : 'L', count };
+});
+
+// Head-to-head records: headToHead[A][B] = A's record against B.
+const headToHead = {};
+teamCodes.forEach(a => { headToHead[a] = {}; teamCodes.forEach(b => { if (a !== b) headToHead[a][b] = { w: 0, l: 0 }; }); });
+retroGames.forEach(g => {
+  if (!headToHead[g.visTeam] || !headToHead[g.homeTeam]) return;
+  const visWin = g.visScore > g.homeScore;
+  headToHead[g.visTeam][g.homeTeam][visWin ? 'w' : 'l']++;
+  headToHead[g.homeTeam][g.visTeam][visWin ? 'l' : 'w']++;
+});
+
 const result = {
   scrapedAt: raw.scrapedAt,
   teams, teamCodes,
-  seasonTrend, seasonTrendInSync, retroGamesTotal, officialGamesTotal,
+  seasonTrend, seasonTrendInSync, retroGamesTotal, officialGamesTotal, headToHead,
   qualBatters, sbLeaders, qualPitchers, soLeaders,
   bio: {
     avgAge, medianAge, minAge: Math.min(...ages), maxAge: Math.max(...ages), countryCount: nationality.length,

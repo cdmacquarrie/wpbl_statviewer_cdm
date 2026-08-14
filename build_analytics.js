@@ -176,7 +176,7 @@ svg circle.pt-ana { cursor: pointer; }
       <div class="kicker">2026 Regular Season</div>
       <h1>WPBL At-Bat Performance Analytics</h1>
       <p>PCA over each batter's at-bat rate-stat profile (AVG/OBP/SLG and contact outcomes) — pitching, fielding, and base-running are not part of this model. For age/stat correlations across any two metrics, including pitching ones, use the Stat Explorer tab.</p>
-      <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} · auto-updated daily</p>
+      <p class="cite">Source: womensprobaseballleague.com/stats &amp; /prospect-ranking — through ${new Date(data.scrapedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'America/Chicago' })} · auto-updated daily</p>
     </header>
 
     <div class="caveat"><b>Sample-size warning:</b> teams have played ${gamesPlayedPhrase} so far this season, and most batters have only a handful of plate appearances — the PCA below is still an early-season snapshot, not a predictive signal. Note: this includes anyone who's recorded a plate appearance, regardless of the site's "Signed" status — that flag has lagged actual game participation for at least one player.</div>
